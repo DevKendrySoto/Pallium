@@ -71,6 +71,11 @@ export class PatientsService {
     return patient
   }
 
+  async getTimeline(id: string) {
+    await this.getById(id) // 404 si no existe
+    return this.repo.listTimeline(id)
+  }
+
   /** Aprobación de admisión: PENDING_APPROVAL → ACTIVE, sella aprobador y fecha. */
   async approve(id: string, actorId: string) {
     const patient = await this.getById(id)
