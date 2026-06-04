@@ -37,7 +37,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
     group: 'Operación',
     items: [
       { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-      { label: 'Pacientes', href: '#', icon: Users },
+      { label: 'Pacientes', href: '/patients', icon: Users },
       { label: 'Agenda', href: '#', icon: Calendar },
       { label: 'Rutas', href: '#', icon: Route },
     ],
