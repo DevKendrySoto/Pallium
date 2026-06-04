@@ -12,7 +12,7 @@ interface AuthState {
     token: string
     refreshToken: string
     user: AuthUser
-    role: Role
+    role: Role | null
   }) => void
   setTokens: (token: string, refreshToken: string) => void
   logout: () => void

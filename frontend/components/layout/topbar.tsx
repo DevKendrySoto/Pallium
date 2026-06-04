@@ -19,7 +19,7 @@ export function Topbar() {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
   const logout = useAuthStore((s) => s.logout)
-  const displayName = user?.fullName ?? 'Usuario'
+  const displayName = user?.fullName ?? user?.email ?? 'Usuario'
 
   function handleLogout() {
     logout()
