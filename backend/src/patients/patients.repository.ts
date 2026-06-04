@@ -17,6 +17,15 @@ export class PatientsRepository {
     })
   }
 
+  /** Eventos del timeline del paciente, más recientes primero. */
+  listTimeline(patientId: string) {
+    return this.prisma.timelineEvent.findMany({
+      where: { patientId },
+      include: { actor: { select: { id: true, fullName: true } } },
+      orderBy: { occurredAt: 'desc' },
+    })
+  }
+
   async list(params: {
     status?: PatientStatus
     categoryId?: string

@@ -30,6 +30,12 @@ export class PatientsController {
     return this.patients.getById(id)
   }
 
+  @Get(':id/timeline')
+  @RequirePermissions('timeline:read')
+  timeline(@Param('id') id: string) {
+    return this.patients.getTimeline(id)
+  }
+
   @Post()
   @RequirePermissions('patient:create')
   create(@Body() dto: CreatePatientDto) {
