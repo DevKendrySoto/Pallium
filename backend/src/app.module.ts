@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core'
 import { AlertsModule } from './alerts/alerts.module'
 import { AuthModule } from './auth/auth.module'
 import { CadenceModule } from './cadence/cadence.module'
+import { CategoriesModule } from './categories/categories.module'
 import { ClinicalModule } from './clinical/clinical.module'
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard'
 import { PermissionsGuard } from './common/guards/permissions.guard'
@@ -37,6 +38,7 @@ import { VisitsModule } from './visits/visits.module'
     RoutesModule,
     ClinicalModule,
     ScalesModule,
+    CategoriesModule,
   ],
   controllers: [HealthController],
   providers: [
