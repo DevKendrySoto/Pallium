@@ -4,9 +4,9 @@ import { ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { PatientStatusBadge } from '@/components/patients/patient-status-badge'
+import { PatientTimeline } from '@/components/patients/patient-timeline'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   ALLOWED_TRANSITIONS,
@@ -117,11 +117,7 @@ export default function PatientDetailPage() {
             </CardContent>
           </Card>
 
-          <Separator />
-          <p className="text-sm text-muted-foreground">
-            El timeline, las visitas y las escalas del paciente se integrarán en las siguientes
-            fases.
-          </p>
+          <PatientTimeline patientId={patient.id} />
         </>
       )}
     </div>
