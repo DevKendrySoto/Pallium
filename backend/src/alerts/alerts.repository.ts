@@ -44,6 +44,9 @@ export class AlertsRepository {
         ...(params.severity && { severity: params.severity }),
         ...(params.type && { type: params.type }),
       },
+      include: {
+        patient: { select: { id: true, mrn: true, firstName: true, lastName: true } },
+      },
       orderBy: [{ severity: 'desc' }, { createdAt: 'desc' }],
     })
   }
