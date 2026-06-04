@@ -38,7 +38,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { label: 'Dashboard', href: '/', icon: LayoutDashboard },
       { label: 'Pacientes', href: '#', icon: Users },
-      { label: 'Agenda', href: '#', icon: Calendar },
+      { label: 'Agenda', href: '/agenda', icon: Calendar },
       { label: 'Rutas', href: '#', icon: Route },
     ],
   },
