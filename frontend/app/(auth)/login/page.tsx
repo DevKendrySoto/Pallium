@@ -1,7 +1,9 @@
 'use client'
 
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Activity } from 'lucide-react'
+import { Activity, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -21,39 +23,37 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { useLogin } from '@/features/auth/use-login'
+import { useAuthHydrated } from '@/hooks/use-auth-hydrated'
+import { useAuthStore } from '@/lib/auth-store'
 
 const loginSchema = z.object({
   email: z.string().email('Ingresa un correo válido'),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
-  role: z.enum(['MEDICO', 'ENFERMERIA', 'ADMIN'], {
-    required_error: 'Selecciona un rol',
-  }),
 })
 
 type LoginValues = z.infer<typeof loginSchema>
 
-const ROLES = [
-  { value: 'MEDICO', label: 'Médico' },
-  { value: 'ENFERMERIA', label: 'Enfermería' },
-  { value: 'ADMIN', label: 'Admin' },
-] as const
-
 export default function LoginPage() {
+  const router = useRouter()
+  const hydrated = useAuthHydrated()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const login = useLogin()
+
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
   })
 
-  // Sin lógica real aún: solo registramos los valores.
+  // Si ya hay sesión, no mostramos el login.
+  useEffect(() => {
+    if (hydrated && isAuthenticated) {
+      router.replace('/')
+    }
+  }, [hydrated, isAuthenticated, router])
+
   function onSubmit(values: LoginValues) {
-    console.log('login', values)
+    login.mutate(values)
   }
 
   return (
@@ -77,7 +77,12 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Correo</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="nombre@clinica.com" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="nombre@clinica.com"
+                        autoComplete="email"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -90,38 +95,20 @@ export default function LoginPage() {
                   <FormItem>
                     <FormLabel>Contraseña</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        autoComplete="current-password"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Rol</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona un rol" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {ROLES.map((r) => (
-                          <SelectItem key={r.value} value={r.value}>
-                            {r.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full">
-                Entrar
+              <Button type="submit" className="w-full" disabled={login.isPending}>
+                {login.isPending && <Loader2 size={18} className="animate-spin" />}
+                {login.isPending ? 'Entrando…' : 'Entrar'}
               </Button>
             </form>
           </Form>
