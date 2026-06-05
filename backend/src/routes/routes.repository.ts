@@ -10,6 +10,8 @@ import { PrismaService } from '../prisma/prisma.service'
 
 const routeDetailInclude = {
   driver: true,
+  assignedMedical: { select: { id: true, fullName: true } },
+  assignedNursing: { select: { id: true, fullName: true } },
   dispatches: { orderBy: { createdAt: 'desc' } },
   stops: {
     orderBy: { sequence: 'asc' },
@@ -106,6 +108,59 @@ export class RoutesRepository {
       where: { id: routeId },
       data: { driver: { connect: { id: driverId } } },
       include: routeDetailInclude,
+    })
+  }
+
+  /** Conecta/desconecta el médico y/o enfermera asignados a la ruta. */
+  assignClinicalTeam(
+    routeId: string,
+    data: { medicalId?: string | null; nursingId?: string | null },
+  ) {
+    const update: Prisma.RouteUpdateInput = {}
+    if (data.medicalId !== undefined) {
+      update.assignedMedical = data.medicalId
+        ? { connect: { id: data.medicalId } }
+        : { disconnect: true }
+    }
+    if (data.nursingId !== undefined) {
+      update.assignedNursing = data.nursingId
+        ? { connect: { id: data.nursingId } }
+        : { disconnect: true }
+    }
+    return this.prisma.route.update({
+      where: { id: routeId },
+      data: update,
+      include: routeDetailInclude,
+    })
+  }
+
+  /** Personal clínico activo (médicos, coordinadores y enfermería) para asignar a rutas. */
+  listClinicalStaff() {
+    return this.prisma.user.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+        roles: { some: { role: { code: { in: ['MEDICO', 'COORDINADOR_MEDICO', 'ENFERMERIA'] } } } },
+      },
+      select: {
+        id: true,
+        fullName: true,
+        roles: { select: { role: { select: { code: true } } } },
+      },
+      orderBy: { fullName: 'asc' },
+    })
+  }
+
+  /** Verifica que un usuario exista, esté activo y tenga alguno de los roles. */
+  userWithAnyRoleExists(userId: string, roleCodes: string[]) {
+    return this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        isActive: true,
+        deletedAt: null,
+        roles: { some: { role: { code: { in: roleCodes } } } },
+      },
+      select: { id: true },
     })
   }
 

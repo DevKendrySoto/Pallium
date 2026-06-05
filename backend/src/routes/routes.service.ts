@@ -17,6 +17,7 @@ import { buildDriverMessage, type StopForMessage } from './domain/route-message'
 import { canTransitionRoute, isEditableRoute } from './domain/route-status'
 import type {
   AddStopsDto,
+  AssignClinicalTeamDto,
   BuildFromVisitsDto,
   ChangeRouteStatusDto,
   CreateRouteDto,
@@ -157,6 +158,38 @@ export class RoutesService {
     this.assertEditable(route)
     await this.drivers.getOrThrow(driverId)
     return this.repo.assignDriver(id, driverId)
+  }
+
+  /** Lista el personal clínico disponible, separado en médicos y enfermería. */
+  async getClinicalStaff() {
+    const staff = await this.repo.listClinicalStaff()
+    const has = (u: (typeof staff)[number], codes: string[]) =>
+      u.roles.some((r) => codes.includes(r.role.code))
+    return {
+      medical: staff
+        .filter((u) => has(u, ['MEDICO', 'COORDINADOR_MEDICO']))
+        .map((u) => ({ id: u.id, fullName: u.fullName })),
+      nursing: staff
+        .filter((u) => has(u, ['ENFERMERIA']))
+        .map((u) => ({ id: u.id, fullName: u.fullName })),
+    }
+  }
+
+  /**
+   * Asigna/cambia el equipo clínico (médico y/o enfermera) de la ruta.
+   * Solo ADMIN y COORDINADOR_MEDICO (permiso route:assign-clinical-team).
+   */
+  async assignClinicalTeam(id: string, dto: AssignClinicalTeamDto) {
+    await this.getOrThrow(id)
+    if (dto.medicalId) {
+      const ok = await this.repo.userWithAnyRoleExists(dto.medicalId, ['MEDICO', 'COORDINADOR_MEDICO'])
+      if (!ok) throw new BadRequestException('El médico asignado no es válido')
+    }
+    if (dto.nursingId) {
+      const ok = await this.repo.userWithAnyRoleExists(dto.nursingId, ['ENFERMERIA'])
+      if (!ok) throw new BadRequestException('La enfermera asignada no es válida')
+    }
+    return this.repo.assignClinicalTeam(id, { medicalId: dto.medicalId, nursingId: dto.nursingId })
   }
 
   async changeStatus(id: string, dto: ChangeRouteStatusDto) {

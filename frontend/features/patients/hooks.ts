@@ -76,24 +76,20 @@ export function useCreatePatient() {
   })
 }
 
-export function useApprovePatient() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => api.patch<Patient>(`/patients/${id}/approve`),
-    onSuccess: (patient) => {
-      qc.invalidateQueries({ queryKey: patientKeys.all })
-      qc.invalidateQueries({ queryKey: patientKeys.detail(patient.id) })
-      toast.success('Admisión aprobada')
-    },
-    onError: (error) => toast.error(error instanceof Error ? error.message : 'No se pudo aprobar'),
-  })
+export interface ChangeStatusInput {
+  id: string
+  status: PatientStatus
+  reason?: string
+  /** Obligatorios cuando status = DECEASED. */
+  deathDate?: string
+  deathPlace?: string
 }
 
 export function useChangePatientStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, status, reason }: { id: string; status: PatientStatus; reason?: string }) =>
-      api.patch<Patient>(`/patients/${id}/status`, { status, reason }),
+    mutationFn: ({ id, ...body }: ChangeStatusInput) =>
+      api.patch<Patient>(`/patients/${id}/status`, body),
     onSuccess: (patient) => {
       qc.invalidateQueries({ queryKey: patientKeys.all })
       qc.invalidateQueries({ queryKey: patientKeys.detail(patient.id) })

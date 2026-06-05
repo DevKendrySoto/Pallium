@@ -42,12 +42,6 @@ export class PatientsController {
     return this.patients.create(dto)
   }
 
-  @Patch(':id/approve')
-  @RequirePermissions('patient:approve')
-  approve(@Param('id') id: string, @CurrentUser('id') actorId: string) {
-    return this.patients.approve(id, actorId)
-  }
-
   @Patch(':id/status')
   @RequirePermissions('patient:change-status')
   changeStatus(

@@ -2,195 +2,10 @@ import 'dotenv/config'
 import { PrismaClient, ScaleCategory, Specialty } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import * as argon2 from 'argon2'
+import { ALL, PERMISSIONS, ROLES } from './rbac'
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
-
-// ============================================================================
-//  PERMISOS  (formato "recurso:acción")
-// ============================================================================
-
-const PERMISSIONS: Record<string, string> = {
-  // Pacientes
-  'patient:read': 'Ver pacientes y su historia',
-  'patient:create': 'Registrar pacientes',
-  'patient:update': 'Editar datos del paciente',
-  'patient:delete': 'Eliminar (lógico) un paciente',
-  'patient:approve': 'Aprobar admisión (Pendiente → Activo)',
-  'patient:change-status': 'Cambiar estado (Activo/Pasivo/Deceso)',
-
-  // Visitas / agenda
-  'visit:read': 'Ver visitas y agenda',
-  'visit:create': 'Agendar visitas',
-  'visit:update': 'Editar/reagendar visitas',
-  'visit:cancel': 'Cancelar visitas',
-  'visit:complete': 'Registrar visita como realizada',
-  'visit:assign': 'Asignar profesionales a una visita',
-
-  // Rutas
-  'route:read': 'Ver rutas',
-  'route:create': 'Crear rutas',
-  'route:update': 'Editar rutas',
-  'route:delete': 'Eliminar rutas',
-  'route:dispatch': 'Despachar ruta al chofer (WhatsApp)',
-  'driver:read': 'Ver choferes',
-  'driver:manage': 'Gestionar choferes',
-
-  // Perfil clínico persistente
-  'allergy:write': 'Registrar/editar alergias',
-  'history:write': 'Registrar/editar antecedentes y hábitos',
-  'directive:write': 'Registrar/firmar voluntades anticipadas',
-  'social:write': 'Editar cuidadores, familia, genograma y perfil social',
-  'immunization:write': 'Registrar/editar inmunizaciones',
-
-  // Registro clínico
-  'clinical:read': 'Ver registros clínicos',
-  'note:medical:write': 'Escribir nota médica',
-  'note:nursing:write': 'Escribir nota de enfermería',
-  'note:psychology:write': 'Escribir nota de psicología',
-  'note:social:write': 'Escribir nota de trabajo social',
-  'note:physio:write': 'Escribir nota de fisiatría/terapia física',
-  'vitals:write': 'Registrar signos vitales',
-  'diagnosis:read': 'Ver diagnósticos',
-  'diagnosis:write': 'Registrar/editar diagnósticos',
-  'medication:read': 'Ver medicación',
-  'medication:write': 'Prescribir/editar medicación',
-
-  // Escalas
-  'scale:read': 'Ver escalas y valoraciones',
-  'scale:assess': 'Aplicar una escala a un paciente',
-  'scale:manage': 'Gestionar el catálogo de escalas',
-
-  // Transversal
-  'alert:read': 'Ver alertas',
-  'alert:manage': 'Reconocer/resolver alertas',
-  'timeline:read': 'Ver el timeline del paciente',
-  'document:read': 'Ver documentos',
-  'document:upload': 'Subir documentos',
-  'document:delete': 'Eliminar documentos',
-
-  // Operaciones
-  'cadence:run': 'Ejecutar manualmente el escaneo de cadencia',
-
-  // Administración
-  'user:read': 'Ver usuarios',
-  'user:manage': 'Gestionar usuarios',
-  'role:read': 'Ver roles',
-  'role:manage': 'Gestionar roles y permisos',
-  'category:manage': 'Gestionar categorías de paciente',
-  'audit:read': 'Consultar la bitácora de auditoría',
-}
-
-const ALL = Object.keys(PERMISSIONS)
-const READ_ONLY = ALL.filter((p) => p.endsWith(':read'))
-
-// ============================================================================
-//  ROLES  (code, nombre, flags y permisos)
-// ============================================================================
-
-interface RoleSeed {
-  code: string
-  name: string
-  description: string
-  isReadOnly?: boolean
-  permissions: string[] | '*'
-}
-
-const ROLES: RoleSeed[] = [
-  {
-    code: 'ADMIN',
-    name: 'Administrador',
-    description: 'Acceso total al sistema',
-    permissions: '*',
-  },
-  {
-    code: 'AUDITOR',
-    name: 'Auditor',
-    description: 'Solo lectura sobre todo el sistema',
-    isReadOnly: true,
-    permissions: [...READ_ONLY, 'audit:read'],
-  },
-  {
-    code: 'AGENDA',
-    name: 'Agenda y Citas',
-    description: 'Gestiona agenda, visitas, rutas y despacho a choferes',
-    permissions: [
-      'patient:read',
-      'visit:read', 'visit:create', 'visit:update', 'visit:cancel', 'visit:assign',
-      'route:read', 'route:create', 'route:update', 'route:delete', 'route:dispatch',
-      'driver:read', 'driver:manage',
-      'cadence:run',
-      'alert:read', 'timeline:read', 'document:read',
-    ],
-  },
-  {
-    code: 'MEDICO',
-    name: 'Médico',
-    description: 'Atención médica, diagnósticos, medicación y aprobación de admisión',
-    permissions: [
-      'patient:read', 'patient:approve', 'patient:change-status',
-      'visit:read', 'visit:complete', 'visit:assign',
-      'clinical:read', 'note:medical:write', 'vitals:write',
-      'diagnosis:read', 'diagnosis:write',
-      'medication:read', 'medication:write',
-      'allergy:write', 'history:write', 'directive:write', 'immunization:write',
-      'scale:read', 'scale:assess',
-      'alert:read', 'alert:manage',
-      'timeline:read', 'document:read', 'document:upload',
-    ],
-  },
-  {
-    code: 'ENFERMERIA',
-    name: 'Enfermería',
-    description: 'Cuidados de enfermería, curaciones, signos vitales y escalas',
-    permissions: [
-      'patient:read',
-      'visit:read', 'visit:complete',
-      'clinical:read', 'note:nursing:write', 'vitals:write',
-      'medication:read',
-      'allergy:write', 'history:write', 'immunization:write',
-      'scale:read', 'scale:assess',
-      'alert:read', 'alert:manage',
-      'timeline:read', 'document:read', 'document:upload',
-    ],
-  },
-  {
-    code: 'PSICOLOGIA',
-    name: 'Psicología',
-    description: 'Atención psicológica y escalas psicosociales',
-    permissions: [
-      'patient:read',
-      'visit:read', 'visit:complete',
-      'clinical:read', 'note:psychology:write',
-      'scale:read', 'scale:assess',
-      'alert:read', 'timeline:read', 'document:read',
-    ],
-  },
-  {
-    code: 'TRABAJO_SOCIAL',
-    name: 'Trabajo Social',
-    description: 'Valoración y gestión socioeconómica y familiar',
-    permissions: [
-      'patient:read',
-      'visit:read', 'visit:complete',
-      'clinical:read', 'note:social:write',
-      'social:write',
-      'alert:read', 'timeline:read', 'document:read', 'document:upload',
-    ],
-  },
-  {
-    code: 'FISIATRA',
-    name: 'Fisiatra / Terapia Física',
-    description: 'Valoración funcional y terapia física',
-    permissions: [
-      'patient:read',
-      'visit:read', 'visit:complete',
-      'clinical:read', 'note:physio:write',
-      'scale:read', 'scale:assess',
-      'alert:read', 'timeline:read', 'document:read',
-    ],
-  },
-]
 
 // ============================================================================
 //  CATEGORÍAS DE PACIENTE
@@ -1186,6 +1001,8 @@ async function main() {
       create: { code, description },
     })
   }
+  // Elimina permisos retirados del catálogo (p. ej. patient:approve).
+  await prisma.permission.deleteMany({ where: { code: { notIn: ALL } } })
   console.log(`  ✔ ${ALL.length} permisos`)
 
   // Roles + asignación de permisos
@@ -1276,6 +1093,7 @@ async function main() {
   const staffHash = await argon2.hash(staffPassword)
   const STAFF = [
     { email: 'medico@pallium.local', fullName: 'Dra. Médico', roleCode: 'MEDICO' },
+    { email: 'coordinador@pallium.local', fullName: 'Dr. Coordinador Médico', roleCode: 'COORDINADOR_MEDICO' },
     { email: 'enfermeria@pallium.local', fullName: 'Enf. Enfermería', roleCode: 'ENFERMERIA' },
     { email: 'psicologia@pallium.local', fullName: 'Psic. Psicología', roleCode: 'PSICOLOGIA' },
     { email: 'trabajosocial@pallium.local', fullName: 'T.S. Trabajo Social', roleCode: 'TRABAJO_SOCIAL' },

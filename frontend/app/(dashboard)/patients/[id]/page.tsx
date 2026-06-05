@@ -1,8 +1,10 @@
 'use client'
 
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { useState } from 'react'
+import { DeathDialog, type DeathDetails } from '@/components/patients/death-dialog'
 import { PatientStatusBadge } from '@/components/patients/patient-status-badge'
 import { PatientTimeline } from '@/components/patients/patient-timeline'
 import { ClinicalTab } from '@/components/patients/profile/clinical-tab'
@@ -17,20 +19,17 @@ import {
   SEX_LABELS,
   STATUS_LABELS,
 } from '@/features/patients/constants'
-import {
-  useApprovePatient,
-  useChangePatientStatus,
-  usePatient,
-} from '@/features/patients/hooks'
-import { useReadOnly } from '@/hooks/use-read-only'
+import { RequirePermission } from '@/components/auth/require-permission'
+import { useChangePatientStatus, usePatient } from '@/features/patients/hooks'
 import type { PatientStatus } from '@/types/patient'
 
 const TRANSITION_LABELS: Record<PatientStatus, string> = {
   ACTIVE: 'Reactivar',
   PASSIVE: 'Pasar a pasivo',
   DECEASED: 'Registrar deceso',
-  PENDING_APPROVAL: 'Pendiente',
 }
+
+const NO_PERMISSION_MSG = 'Solo el coordinador médico puede cambiar el estado de un paciente.'
 
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
   return (
@@ -48,11 +47,25 @@ function fmtDate(value: string | null): string {
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data: patient, isLoading, isError } = usePatient(id)
-  const approve = useApprovePatient()
   const changeStatus = useChangePatientStatus()
-  const readOnly = useReadOnly()
+  const [deathOpen, setDeathOpen] = useState(false)
 
-  const busy = approve.isPending || changeStatus.isPending
+  const busy = changeStatus.isPending
+
+  function onTransition(patientId: string, target: PatientStatus) {
+    if (target === 'DECEASED') {
+      setDeathOpen(true)
+      return
+    }
+    changeStatus.mutate({ id: patientId, status: target })
+  }
+
+  function onConfirmDeath(patientId: string, details: DeathDetails) {
+    changeStatus.mutate(
+      { id: patientId, status: 'DECEASED', ...details },
+      { onSuccess: () => setDeathOpen(false) },
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -81,23 +94,27 @@ export default function PatientDetailPage() {
             </div>
 
             <div className="flex gap-2">
-              {!readOnly && patient.status === 'PENDING_APPROVAL' && (
-                <Button onClick={() => approve.mutate(patient.id)} disabled={busy}>
-                  {busy && <Loader2 size={18} className="animate-spin" />}
-                  Aprobar admisión
-                </Button>
-              )}
-              {!readOnly &&
-                ALLOWED_TRANSITIONS[patient.status].map((target) => (
-                <Button
-                  key={target}
-                  variant={target === 'DECEASED' ? 'destructive' : 'outline'}
-                  disabled={busy}
-                  onClick={() => changeStatus.mutate({ id: patient.id, status: target })}
-                >
-                  {TRANSITION_LABELS[target]}
-                </Button>
-              ))}
+              <RequirePermission
+                permission="patient:change-status"
+                fallback={
+                  patient.status !== 'DECEASED' ? (
+                    <Button variant="outline" disabled title={NO_PERMISSION_MSG}>
+                      Cambiar estado
+                    </Button>
+                  ) : null
+                }
+              >
+                {ALLOWED_TRANSITIONS[patient.status].map((target) => (
+                  <Button
+                    key={target}
+                    variant={target === 'DECEASED' ? 'destructive' : 'outline'}
+                    disabled={busy}
+                    onClick={() => onTransition(patient.id, target)}
+                  >
+                    {TRANSITION_LABELS[target]}
+                  </Button>
+                ))}
+              </RequirePermission>
             </div>
           </div>
 
@@ -145,6 +162,14 @@ export default function PatientDetailPage() {
               <PatientTimeline patientId={patient.id} />
             </TabsContent>
           </Tabs>
+
+          <DeathDialog
+            open={deathOpen}
+            onOpenChange={setDeathOpen}
+            patientName={`${patient.firstName} ${patient.lastName}`}
+            pending={busy}
+            onConfirm={(details) => onConfirmDeath(patient.id, details)}
+          />
         </>
       )}
     </div>

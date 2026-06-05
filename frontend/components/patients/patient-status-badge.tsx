@@ -5,7 +5,6 @@ import type { PatientStatus } from '@/types/patient'
 
 const STYLES: Record<PatientStatus, string> = {
   ACTIVE: 'border-transparent bg-success text-success-foreground',
-  PENDING_APPROVAL: 'border-transparent bg-warning text-warning-foreground',
   PASSIVE: 'border-slate-200 bg-slate-100 text-slate-700',
   DECEASED: 'border-transparent bg-danger text-danger-foreground',
 }

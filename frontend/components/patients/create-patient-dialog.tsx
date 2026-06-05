@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/select'
 import { ID_TYPE_LABELS, SEX_LABELS } from '@/features/patients/constants'
 import { useCategories, useCreatePatient } from '@/features/patients/hooks'
-import { useReadOnly } from '@/hooks/use-read-only'
+import { useHasPermission } from '@/hooks/use-permission'
 
 const schema = z.object({
   identificationType: z.enum(['CEDULA', 'PASSPORT', 'BIRTH_CERTIFICATE', 'FOREIGN_ID', 'OTHER']),
@@ -51,7 +51,7 @@ type FormValues = z.infer<typeof schema>
 
 export function CreatePatientDialog() {
   const [open, setOpen] = useState(false)
-  const readOnly = useReadOnly()
+  const canCreate = useHasPermission('patient:create')
   const categories = useCategories()
   const createPatient = useCreatePatient()
 
@@ -82,7 +82,8 @@ export function CreatePatientDialog() {
     )
   }
 
-  if (readOnly) return null
+  // Solo ADMIN y COORDINADOR_MEDICO pueden registrar pacientes.
+  if (!canCreate) return null
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -95,7 +96,7 @@ export function CreatePatientDialog() {
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Nuevo paciente</DialogTitle>
-          <DialogDescription>Registra un paciente para aprobación de admisión.</DialogDescription>
+          <DialogDescription>El paciente queda activo de inmediato.</DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

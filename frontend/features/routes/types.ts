@@ -50,6 +50,16 @@ export interface RouteListItem {
   _count: { stops: number }
 }
 
+export interface ClinicalStaffMember {
+  id: string
+  fullName: string
+}
+
+export interface ClinicalStaff {
+  medical: ClinicalStaffMember[]
+  nursing: ClinicalStaffMember[]
+}
+
 export interface RouteDetail {
   id: string
   name: string | null
@@ -57,6 +67,8 @@ export interface RouteDetail {
   status: RouteStatus
   notes: string | null
   driver: Driver | null
+  assignedMedical: ClinicalStaffMember | null
+  assignedNursing: ClinicalStaffMember | null
   dispatchedAt: string | null
   stops: RouteStop[]
   dispatches: RouteDispatch[]

@@ -6,6 +6,7 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  ValidateIf,
 } from 'class-validator'
 
 export class CreateRouteDto {
@@ -57,6 +58,22 @@ export class ReorderStopsDto {
 export class AssignDriverDto {
   @IsString()
   driverId!: string
+}
+
+/**
+ * Asignación de equipo clínico a la ruta. Solo ADMIN y COORDINADOR_MEDICO
+ * (permiso route:assign-clinical-team). Enviar `null` para desasignar.
+ */
+export class AssignClinicalTeamDto {
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  medicalId?: string | null
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsString()
+  nursingId?: string | null
 }
 
 export class ChangeRouteStatusDto {

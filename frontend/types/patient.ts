@@ -1,4 +1,4 @@
-export type PatientStatus = 'PENDING_APPROVAL' | 'ACTIVE' | 'PASSIVE' | 'DECEASED'
+export type PatientStatus = 'ACTIVE' | 'PASSIVE' | 'DECEASED'
 
 export type Sex = 'MALE' | 'FEMALE' | 'OTHER' | 'UNKNOWN'
 
@@ -28,9 +28,10 @@ export interface Patient {
   email: string | null
   categoryId: string
   status: PatientStatus
-  approvedAt: string | null
   admittedAt: string | null
   deceasedAt: string | null
+  deathDate: string | null
+  deathPlace: string | null
   lastRegularVisitAt: string | null
   nextRegularVisitDue: string | null
   createdAt: string
