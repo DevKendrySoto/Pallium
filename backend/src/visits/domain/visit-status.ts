@@ -30,7 +30,7 @@ const TRANSITIONS: Record<VisitStatus, VisitStatus[]> = {
     VisitStatus.NO_SHOW,
     VisitStatus.CANCELLED,
   ],
-  [VisitStatus.IN_PROGRESS]: [VisitStatus.COMPLETED, VisitStatus.CANCELLED],
+  [VisitStatus.IN_PROGRESS]: [VisitStatus.COMPLETED, VisitStatus.CANCELLED, VisitStatus.NO_SHOW],
   [VisitStatus.COMPLETED]: [],
   [VisitStatus.CANCELLED]: [],
   [VisitStatus.NO_SHOW]: [VisitStatus.RESCHEDULED],

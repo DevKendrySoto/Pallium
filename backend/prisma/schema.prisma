@@ -75,6 +75,14 @@ enum VisitModality {
   TELEHEALTH // Teleconsulta
 }
 
+/// Resultado del cierre de una visita (precisa el motivo más allá del status).
+enum VisitOutcome {
+  COMPLETED // realizada
+  PATIENT_NOT_HOME // fuera de casa
+  OUT_OF_TIME // fuera de tiempo
+  REFUSED // rehúso de atención
+}
+
 enum VisitStatus {
   SCHEDULED // Agendada
   CONFIRMED // Confirmada con paciente/familia
@@ -356,6 +364,9 @@ model Patient {
   lastRegularVisitAt  DateTime? @map("last_regular_visit_at")
   nextRegularVisitDue DateTime? @map("next_regular_visit_due")
 
+  /// Contador de rehúsos de atención (lo incrementa el cierre de visita REFUSED).
+  refusalCount Int @default(0) @map("refusal_count")
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
@@ -475,8 +486,17 @@ model Visit {
 
   // Ejecución
   checkInAt    DateTime? @map("check_in_at")
+  checkInLat   Float?    @map("check_in_lat")
+  checkInLng   Float?    @map("check_in_lng")
   completedAt  DateTime? @map("completed_at")
   cancelReason String?   @map("cancel_reason")
+  /// Resultado preciso del cierre (independiente del status).
+  outcome      VisitOutcome?
+
+  // Firma del cuidador al cierre
+  caregiverSignatureKey String?   @map("caregiver_signature_key")
+  signerName            String?   @map("signer_name")
+  signedAt              DateTime? @map("signed_at")
 
   // Reagendamiento (apunta a la visita que la reemplaza)
   rescheduledToId String? @unique @map("rescheduled_to_id")
