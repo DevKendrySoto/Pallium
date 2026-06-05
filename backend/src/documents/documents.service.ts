@@ -24,7 +24,7 @@ export class DocumentsService {
     userId: string,
   ) {
     await this.assertPatient(params.patientId)
-    const safeName = file.originalname.replace(/[^\w.\-]/g, '_')
+    const safeName = file.originalname.replace(/[^\w.-]/g, '_')
     const storageKey = `clinical/${params.patientId}/${randomUUID()}-${safeName}`
     await this.storage.put(storageKey, file.buffer, file.mimetype)
 
