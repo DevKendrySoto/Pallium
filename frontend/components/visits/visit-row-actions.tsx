@@ -22,14 +22,16 @@ import { Label } from '@/components/ui/label'
 import { ACTIONABLE_STATUSES } from '@/features/visits/constants'
 import { useCancelVisit, useCompleteVisit } from '@/features/visits/hooks'
 import type { Visit } from '@/features/visits/types'
+import { useReadOnly } from '@/hooks/use-read-only'
 
 export function VisitRowActions({ visit }: { visit: Visit }) {
   const [cancelOpen, setCancelOpen] = useState(false)
   const [reason, setReason] = useState('')
+  const readOnly = useReadOnly()
   const complete = useCompleteVisit()
   const cancel = useCancelVisit()
 
-  if (!ACTIONABLE_STATUSES.includes(visit.status)) {
+  if (readOnly || !ACTIONABLE_STATUSES.includes(visit.status)) {
     return <span className="text-xs text-muted-foreground">—</span>
   }
 

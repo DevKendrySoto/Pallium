@@ -19,6 +19,7 @@ import {
   useChangePatientStatus,
   usePatient,
 } from '@/features/patients/hooks'
+import { useReadOnly } from '@/hooks/use-read-only'
 import type { PatientStatus } from '@/types/patient'
 
 const TRANSITION_LABELS: Record<PatientStatus, string> = {
@@ -46,6 +47,7 @@ export default function PatientDetailPage() {
   const { data: patient, isLoading, isError } = usePatient(id)
   const approve = useApprovePatient()
   const changeStatus = useChangePatientStatus()
+  const readOnly = useReadOnly()
 
   const busy = approve.isPending || changeStatus.isPending
 
@@ -76,13 +78,14 @@ export default function PatientDetailPage() {
             </div>
 
             <div className="flex gap-2">
-              {patient.status === 'PENDING_APPROVAL' && (
+              {!readOnly && patient.status === 'PENDING_APPROVAL' && (
                 <Button onClick={() => approve.mutate(patient.id)} disabled={busy}>
                   {busy && <Loader2 size={18} className="animate-spin" />}
                   Aprobar admisión
                 </Button>
               )}
-              {ALLOWED_TRANSITIONS[patient.status].map((target) => (
+              {!readOnly &&
+                ALLOWED_TRANSITIONS[patient.status].map((target) => (
                 <Button
                   key={target}
                   variant={target === 'DECEASED' ? 'destructive' : 'outline'}

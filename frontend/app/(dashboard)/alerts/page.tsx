@@ -38,6 +38,7 @@ import {
   useResolveAlert,
 } from '@/features/alerts/hooks'
 import type { Alert, AlertSeverity, AlertStatus, AlertType } from '@/types/alert'
+import { useReadOnly } from '@/hooks/use-read-only'
 
 const ALL = 'ALL'
 
@@ -51,12 +52,14 @@ function fmtDateTime(iso: string): string {
 }
 
 function AlertActions({ alert }: { alert: Alert }) {
+  const readOnly = useReadOnly()
   const acknowledge = useAcknowledgeAlert()
   const resolve = useResolveAlert()
   const canAck = alert.status === 'OPEN'
   const canResolve = alert.status === 'OPEN' || alert.status === 'ACKNOWLEDGED'
 
-  if (!canAck && !canResolve) return <span className="text-xs text-muted-foreground">—</span>
+  if (readOnly || (!canAck && !canResolve))
+    return <span className="text-xs text-muted-foreground">—</span>
 
   return (
     <DropdownMenu>

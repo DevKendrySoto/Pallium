@@ -32,6 +32,7 @@ import {
   useReorderStops,
   useRoute,
 } from '@/features/routes/hooks'
+import { useReadOnly } from '@/hooks/use-read-only'
 
 function fmtTime(iso: string | null): string {
   return iso ? new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : '--:--'
@@ -39,6 +40,7 @@ function fmtTime(iso: string | null): string {
 
 export default function RouteDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const readOnly = useReadOnly()
   const { data: route, isLoading, isError } = useRoute(id)
   const drivers = useDrivers()
   const assignDriver = useAssignDriver(id)
@@ -56,9 +58,13 @@ export default function RouteDetailPage() {
     reorder.mutate(ids)
   }
 
-  const editable = route ? isEditableRoute(route.status) : false
+  const editable = !readOnly && (route ? isEditableRoute(route.status) : false)
   const canDispatch =
-    route && route.driver && route.stops.length > 0 && ['PLANNED', 'DISPATCHED'].includes(route.status)
+    !readOnly &&
+    route &&
+    route.driver &&
+    route.stops.length > 0 &&
+    ['PLANNED', 'DISPATCHED'].includes(route.status)
   const lastDispatch = route?.dispatches[0]
 
   return (
@@ -88,17 +94,17 @@ export default function RouteDetailPage() {
             </div>
 
             <div className="flex flex-wrap justify-end gap-2">
-              {route.status === 'DRAFT' && (
+              {!readOnly && route.status === 'DRAFT' && (
                 <Button variant="outline" onClick={() => changeStatus.mutate('PLANNED')}>
                   Planificar
                 </Button>
               )}
-              {route.status === 'DISPATCHED' && (
+              {!readOnly && route.status === 'DISPATCHED' && (
                 <Button variant="outline" onClick={() => changeStatus.mutate('IN_PROGRESS')}>
                   Iniciar
                 </Button>
               )}
-              {route.status === 'IN_PROGRESS' && (
+              {!readOnly && route.status === 'IN_PROGRESS' && (
                 <Button variant="outline" onClick={() => changeStatus.mutate('COMPLETED')}>
                   Completar
                 </Button>

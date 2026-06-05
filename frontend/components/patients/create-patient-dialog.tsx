@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/select'
 import { ID_TYPE_LABELS, SEX_LABELS } from '@/features/patients/constants'
 import { useCategories, useCreatePatient } from '@/features/patients/hooks'
+import { useReadOnly } from '@/hooks/use-read-only'
 
 const schema = z.object({
   identificationType: z.enum(['CEDULA', 'PASSPORT', 'BIRTH_CERTIFICATE', 'FOREIGN_ID', 'OTHER']),
@@ -50,6 +51,7 @@ type FormValues = z.infer<typeof schema>
 
 export function CreatePatientDialog() {
   const [open, setOpen] = useState(false)
+  const readOnly = useReadOnly()
   const categories = useCategories()
   const createPatient = useCreatePatient()
 
@@ -79,6 +81,8 @@ export function CreatePatientDialog() {
       },
     )
   }
+
+  if (readOnly) return null
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

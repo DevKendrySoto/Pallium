@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { useCreateDriver } from '@/features/routes/hooks'
+import { useReadOnly } from '@/hooks/use-read-only'
 
 const schema = z.object({
   fullName: z.string().min(3, 'Requerido'),
@@ -35,6 +36,7 @@ type FormValues = z.infer<typeof schema>
 
 export function CreateDriverDialog({ onCreated }: { onCreated?: (id: string) => void }) {
   const [open, setOpen] = useState(false)
+  const readOnly = useReadOnly()
   const createDriver = useCreateDriver()
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -50,6 +52,8 @@ export function CreateDriverDialog({ onCreated }: { onCreated?: (id: string) => 
       },
     })
   }
+
+  if (readOnly) return null
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

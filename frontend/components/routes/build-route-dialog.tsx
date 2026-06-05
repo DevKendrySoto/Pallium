@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useBuildFromVisits } from '@/features/routes/hooks'
+import { useReadOnly } from '@/hooks/use-read-only'
 
 /** Arma una ruta con las visitas domiciliarias sin asignar del día elegido. */
 export function BuildRouteDialog({ defaultDate }: { defaultDate?: string }) {
@@ -23,6 +24,7 @@ export function BuildRouteDialog({ defaultDate }: { defaultDate?: string }) {
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState(defaultDate ?? '')
   const [name, setName] = useState('')
+  const readOnly = useReadOnly()
   const build = useBuildFromVisits()
 
   function onBuild() {
@@ -37,6 +39,8 @@ export function BuildRouteDialog({ defaultDate }: { defaultDate?: string }) {
       },
     )
   }
+
+  if (readOnly) return null
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
