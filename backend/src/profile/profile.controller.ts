@@ -14,11 +14,19 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { RequirePermissions } from '../common/decorators/permissions.decorator'
 import {
   CreateAllergyDto,
+  CreateCaregiverDto,
+  CreateFamilyMemberDto,
   CreateHistoryDto,
+  CreateImmunizationDto,
+  GenogramDto,
   UpdateAllergyDto,
+  UpdateCaregiverDto,
+  UpdateFamilyMemberDto,
   UpdateHistoryDto,
+  UpdateImmunizationDto,
   UpsertDirectiveDto,
   UpsertHabitDto,
+  UpsertSocialProfileDto,
 } from './dto/profile.dto'
 import { ProfileService } from './profile.service'
 
@@ -125,5 +133,120 @@ export class ProfileController {
     @CurrentUser('id') userId: string,
   ) {
     return this.profile.upsertDirective(patientId, dto, userId)
+  }
+
+  // ---- Cuidadores (Fase 2) ----
+  @Get('patients/:patientId/caregivers')
+  @RequirePermissions('patient:read')
+  listCaregivers(@Param('patientId') patientId: string) {
+    return this.profile.listCaregivers(patientId)
+  }
+
+  @Post('patients/:patientId/caregivers')
+  @RequirePermissions('social:write')
+  createCaregiver(@Param('patientId') patientId: string, @Body() dto: CreateCaregiverDto) {
+    return this.profile.createCaregiver(patientId, dto)
+  }
+
+  @Patch('caregivers/:id')
+  @RequirePermissions('social:write')
+  updateCaregiver(@Param('id') id: string, @Body() dto: UpdateCaregiverDto) {
+    return this.profile.updateCaregiver(id, dto)
+  }
+
+  @Delete('caregivers/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions('social:write')
+  deleteCaregiver(@Param('id') id: string) {
+    return this.profile.deleteCaregiver(id)
+  }
+
+  // ---- Familia y genograma (Fase 2) ----
+  @Get('patients/:patientId/family-members')
+  @RequirePermissions('patient:read')
+  listFamily(@Param('patientId') patientId: string) {
+    return this.profile.listFamily(patientId)
+  }
+
+  @Post('patients/:patientId/family-members')
+  @RequirePermissions('social:write')
+  createFamilyMember(
+    @Param('patientId') patientId: string,
+    @Body() dto: CreateFamilyMemberDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.profile.createFamilyMember(patientId, dto, userId)
+  }
+
+  @Patch('family-members/:id')
+  @RequirePermissions('social:write')
+  updateFamilyMember(@Param('id') id: string, @Body() dto: UpdateFamilyMemberDto) {
+    return this.profile.updateFamilyMember(id, dto)
+  }
+
+  @Delete('family-members/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions('social:write')
+  deleteFamilyMember(@Param('id') id: string) {
+    return this.profile.deleteFamilyMember(id)
+  }
+
+  @Get('patients/:patientId/genogram')
+  @RequirePermissions('patient:read')
+  getGenogram(@Param('patientId') patientId: string) {
+    return this.profile.getGenogram(patientId)
+  }
+
+  @Put('patients/:patientId/genogram')
+  @RequirePermissions('social:write')
+  setGenogram(@Param('patientId') patientId: string, @Body() dto: GenogramDto) {
+    return this.profile.setGenogram(patientId, dto.genogram)
+  }
+
+  // ---- Perfil social / vivienda (Fase 2) ----
+  @Get('patients/:patientId/social-profile')
+  @RequirePermissions('patient:read')
+  getSocialProfile(@Param('patientId') patientId: string) {
+    return this.profile.getSocialProfile(patientId)
+  }
+
+  @Put('patients/:patientId/social-profile')
+  @RequirePermissions('social:write')
+  upsertSocialProfile(
+    @Param('patientId') patientId: string,
+    @Body() dto: UpsertSocialProfileDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.profile.upsertSocialProfile(patientId, dto, userId)
+  }
+
+  // ---- Inmunizaciones (Fase 2) ----
+  @Get('patients/:patientId/immunizations')
+  @RequirePermissions('patient:read')
+  listImmunizations(@Param('patientId') patientId: string) {
+    return this.profile.listImmunizations(patientId)
+  }
+
+  @Post('patients/:patientId/immunizations')
+  @RequirePermissions('immunization:write')
+  createImmunization(
+    @Param('patientId') patientId: string,
+    @Body() dto: CreateImmunizationDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.profile.createImmunization(patientId, dto, userId)
+  }
+
+  @Patch('immunizations/:id')
+  @RequirePermissions('immunization:write')
+  updateImmunization(@Param('id') id: string, @Body() dto: UpdateImmunizationDto) {
+    return this.profile.updateImmunization(id, dto)
+  }
+
+  @Delete('immunizations/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermissions('immunization:write')
+  deleteImmunization(@Param('id') id: string) {
+    return this.profile.deleteImmunization(id)
   }
 }

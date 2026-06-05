@@ -1,12 +1,20 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
+import type { Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import type {
   CreateAllergyDto,
+  CreateCaregiverDto,
+  CreateFamilyMemberDto,
   CreateHistoryDto,
+  CreateImmunizationDto,
   UpdateAllergyDto,
+  UpdateCaregiverDto,
+  UpdateFamilyMemberDto,
   UpdateHistoryDto,
+  UpdateImmunizationDto,
   UpsertDirectiveDto,
   UpsertHabitDto,
+  UpsertSocialProfileDto,
 } from './dto/profile.dto'
 
 @Injectable()
@@ -113,5 +121,109 @@ export class ProfileService {
       update: data,
       create: { ...data, patientId },
     })
+  }
+
+  // ---- Cuidadores (Fase 2) ----
+  listCaregivers(patientId: string) {
+    return this.prisma.caregiver.findMany({
+      where: { patientId },
+      orderBy: [{ isPrimary: 'desc' }, { fullName: 'asc' }],
+    })
+  }
+
+  async createCaregiver(patientId: string, dto: CreateCaregiverDto) {
+    await this.assertPatient(patientId)
+    return this.prisma.caregiver.create({ data: { ...dto, patientId } })
+  }
+
+  async updateCaregiver(id: string, dto: UpdateCaregiverDto) {
+    const c = await this.prisma.caregiver.findUnique({ where: { id } })
+    if (!c) throw new NotFoundException('Cuidador no encontrado')
+    return this.prisma.caregiver.update({ where: { id }, data: dto })
+  }
+
+  async deleteCaregiver(id: string) {
+    const c = await this.prisma.caregiver.findUnique({ where: { id } })
+    if (!c) throw new NotFoundException('Cuidador no encontrado')
+    await this.prisma.caregiver.delete({ where: { id } })
+  }
+
+  // ---- Familia y genograma (Fase 2) ----
+  listFamily(patientId: string) {
+    return this.prisma.familyMember.findMany({ where: { patientId }, orderBy: { name: 'asc' } })
+  }
+
+  async createFamilyMember(patientId: string, dto: CreateFamilyMemberDto, userId: string) {
+    await this.assertPatient(patientId)
+    return this.prisma.familyMember.create({ data: { ...dto, patientId, recordedById: userId } })
+  }
+
+  async updateFamilyMember(id: string, dto: UpdateFamilyMemberDto) {
+    const f = await this.prisma.familyMember.findUnique({ where: { id } })
+    if (!f) throw new NotFoundException('Familiar no encontrado')
+    return this.prisma.familyMember.update({ where: { id }, data: dto })
+  }
+
+  async deleteFamilyMember(id: string) {
+    const f = await this.prisma.familyMember.findUnique({ where: { id } })
+    if (!f) throw new NotFoundException('Familiar no encontrado')
+    await this.prisma.familyMember.delete({ where: { id } })
+  }
+
+  async getGenogram(patientId: string) {
+    await this.assertPatient(patientId)
+    const p = await this.prisma.patient.findUnique({ where: { id: patientId }, select: { genogram: true } })
+    return p?.genogram ?? null
+  }
+
+  async setGenogram(patientId: string, genogram: Record<string, unknown>) {
+    await this.assertPatient(patientId)
+    await this.prisma.patient.update({
+      where: { id: patientId },
+      data: { genogram: genogram as Prisma.InputJsonValue },
+    })
+    return { genogram }
+  }
+
+  // ---- Perfil social / vivienda (Fase 2, 1:1) ----
+  getSocialProfile(patientId: string) {
+    return this.prisma.socialProfile.findUnique({ where: { patientId } })
+  }
+
+  async upsertSocialProfile(patientId: string, dto: UpsertSocialProfileDto, userId: string) {
+    await this.assertPatient(patientId)
+    const data = { ...dto, recordedById: userId }
+    return this.prisma.socialProfile.upsert({
+      where: { patientId },
+      update: data,
+      create: { ...data, patientId },
+    })
+  }
+
+  // ---- Inmunizaciones (Fase 2) ----
+  listImmunizations(patientId: string) {
+    return this.prisma.immunization.findMany({ where: { patientId }, orderBy: { date: 'desc' } })
+  }
+
+  async createImmunization(patientId: string, dto: CreateImmunizationDto, userId: string) {
+    await this.assertPatient(patientId)
+    return this.prisma.immunization.create({
+      data: { ...dto, date: new Date(dto.date), patientId, recordedById: userId },
+    })
+  }
+
+  async updateImmunization(id: string, dto: UpdateImmunizationDto) {
+    const i = await this.prisma.immunization.findUnique({ where: { id } })
+    if (!i) throw new NotFoundException('Inmunización no encontrada')
+    return this.prisma.immunization.update({
+      where: { id },
+      data: { ...dto, ...(dto.date ? { date: new Date(dto.date) } : {}) },
+    })
+  }
+
+  async deleteImmunization(id: string) {
+    const i = await this.prisma.immunization.findUnique({ where: { id } })
+    if (!i) throw new NotFoundException('Inmunización no encontrada')
+    await this.prisma.immunization.delete({ where: { id } })
   }
 }

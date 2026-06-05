@@ -375,6 +375,11 @@ model Patient {
   medicalHistory   MedicalHistory[]
   habits           Habit[]
   advanceDirective AdvanceDirective?
+  familyMembers    FamilyMember[]
+  immunizations    Immunization[]
+  socialProfile    SocialProfile?
+  /// Estructura del genograma (diagrama familiar).
+  genogram         Json?
 
   @@unique([identificationType, identificationNo])
   @@index([status])
@@ -425,13 +430,17 @@ model PatientAddress {
 
 /// Cuidador / contacto familiar (no es usuario del sistema).
 model Caregiver {
-  id           String  @id @default(cuid())
-  patientId    String  @map("patient_id")
-  patient      Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  fullName     String  @map("full_name")
-  relationship String? // hijo/a, cónyuge, ...
-  phone        String?
-  isPrimary    Boolean @default(false) @map("is_primary")
+  id             String  @id @default(cuid())
+  patientId      String  @map("patient_id")
+  patient        Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fullName       String  @map("full_name")
+  relationship   String? // hijo/a, cónyuge, ...
+  phone          String?
+  isPrimary      Boolean @default(false) @map("is_primary")
+  // Fase 2: contexto del cuidador para el perfil social.
+  isCohabitant   Boolean @default(false) @map("is_cohabitant")
+  burdenFlag     Boolean @default(false) @map("burden_flag")
+  lastZaritScore Float?  @map("last_zarit_score")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1074,4 +1083,77 @@ model AdvanceDirective {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("advance_directives")
+}
+
+// ============================================================================
+//  PERFIL CLÍNICO PERSISTENTE — Fase 2
+//  (Familia + genograma, vivienda/socioeconómico, inmunizaciones)
+// ============================================================================
+
+enum FamilyRole {
+  CAREGIVER
+  DEPENDENT
+  SUPPORT
+  NONE
+}
+
+model FamilyMember {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  name         String
+  relationship String
+  age          Int?
+  alive        Boolean    @default(true)
+  role         FamilyRole @default(NONE)
+  notes        String?
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("family_members")
+}
+
+/// Vivienda y situación socioeconómica (1:1 con el paciente).
+model SocialProfile {
+  id        String  @id @default(cuid())
+  patientId String  @unique @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  housingType   String? @map("housing_type")
+  accessibility String?
+  basicServices String? @map("basic_services")
+  incomeLevel   String? @map("income_level")
+  occupation    String?
+  insurance     String?
+  dependents    Int?
+  notes         String?
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("social_profiles")
+}
+
+model Immunization {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  vaccine String
+  date    DateTime
+  dose    String?
+  lot     String?
+  notes   String?
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("immunizations")
 }
