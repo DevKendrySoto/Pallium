@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { CreateVisitDialog } from '@/components/visits/create-visit-dialog'
 import { VisitStatusBadge, VisitTypeBadge } from '@/components/visits/visit-badges'
@@ -130,7 +131,9 @@ export default function AgendaPage() {
               <TableRow key={v.id}>
                 <TableCell className="font-mono text-xs">{fmtTime(v.scheduledDate)}</TableCell>
                 <TableCell className="font-medium">
-                  {v.patient.firstName} {v.patient.lastName}
+                  <Link href={`/visitas/${v.id}`} className="hover:underline">
+                    {v.patient.firstName} {v.patient.lastName}
+                  </Link>
                 </TableCell>
                 <TableCell>
                   <VisitTypeBadge type={v.type} reason={v.reason} />
