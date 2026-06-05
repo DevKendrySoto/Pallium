@@ -4,6 +4,7 @@ export interface JwtPayload {
   email: string
   roles: string[]
   permissions: string[]
+  isReadOnly: boolean
 }
 
 /** Contenido del refresh token (mínimo: solo identifica al usuario). */

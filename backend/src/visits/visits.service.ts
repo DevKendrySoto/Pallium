@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
@@ -8,6 +9,7 @@ import {
   AlertSeverity,
   AlertType,
   PatientStatus,
+  Specialty,
   TimelineEventType,
   VisitModality,
   VisitOutcome,
@@ -15,6 +17,7 @@ import {
   VisitType,
 } from '@prisma/client'
 import { AlertsService } from '../alerts/alerts.service'
+import type { AuthenticatedUser } from '../common/types/authenticated-user'
 import { PrismaService } from '../prisma/prisma.service'
 import { canTransitionVisit, isTerminalVisitStatus } from './domain/visit-status'
 import type { AssignProfessionalsDto } from './dto/assign-professionals.dto'
@@ -39,6 +42,15 @@ const DEDICATED = new Set<VisitStatus>([
   VisitStatus.CANCELLED,
   VisitStatus.RESCHEDULED,
 ])
+
+/** Rol (código) → especialidad clínica que puede registrar. */
+const ROLE_SPECIALTY: Record<string, Specialty> = {
+  MEDICO: Specialty.MEDICINE,
+  ENFERMERIA: Specialty.NURSING,
+  PSICOLOGIA: Specialty.PSYCHOLOGY,
+  TRABAJO_SOCIAL: Specialty.SOCIAL_WORK,
+  FISIATRA: Specialty.PHYSIOTHERAPY,
+}
 
 @Injectable()
 export class VisitsService {
@@ -255,8 +267,23 @@ export class VisitsService {
   }
 
   /** Crea o actualiza el registro clínico dinámico de la visita (borrador/cierre). */
-  async saveClinicalRecord(id: string, dto: SaveClinicalRecordDto, authorId: string) {
+  async saveClinicalRecord(id: string, dto: SaveClinicalRecordDto, user: AuthenticatedUser) {
     const visit = await this.getOrThrow(id)
+
+    // B1 — cada rol solo registra su especialidad (ADMIN puede cualquiera).
+    if (!user.roles.includes('ADMIN')) {
+      const allowed = user.roles.map((r) => ROLE_SPECIALTY[r]).filter(Boolean)
+      if (!allowed.includes(dto.specialty)) {
+        throw new ForbiddenException('Solo puedes registrar la nota de tu especialidad')
+      }
+    }
+
+    // B2 — inmutable cuando la visita está cerrada o firmada.
+    if (isTerminalVisitStatus(visit.status) || visit.signedAt) {
+      throw new ForbiddenException('La visita está cerrada o firmada; el registro es inmutable')
+    }
+
+    const authorId = user.id
     const existing = await this.prisma.clinicalRecord.findFirst({
       where: { visitId: id, authorId, specialty: dto.specialty, deletedAt: null },
       select: { id: true },
