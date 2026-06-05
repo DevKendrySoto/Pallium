@@ -603,6 +603,10 @@ model ClinicalRecord {
   /// Resumen libre; el detalle estructurado va en la extensión por especialidad.
   summary    String?
 
+  /// Plantilla dinámica usada (key) y su contenido serializado (sections/components/fields).
+  templateKey String? @map("template_key")
+  data        Json?
+
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
@@ -618,6 +622,28 @@ model ClinicalRecord {
   @@index([visitId])
   @@index([specialty])
   @@map("clinical_records")
+}
+
+/// Definición de plantilla clínica dinámica (rol × categoría) que consume el frontend.
+model ClinicalTemplate {
+  id           String     @id @default(cuid())
+  /// Clave estable, p. ej. "medical_adult_palliative".
+  key          String     @unique
+  name         String
+  /// Especialidad/rol que la completa (null para telefónica/duelo).
+  specialty    Specialty?
+  /// Categoría de paciente a la que aplica (code) o null = todas.
+  categoryCode String?    @map("category_code")
+  version      Int        @default(1)
+  /// Estructura: sections[] con components[] y fields[].
+  sections     Json
+  isActive     Boolean    @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([specialty])
+  @@map("clinical_templates")
 }
 
 model MedicalNote {
