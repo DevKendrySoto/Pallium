@@ -28,6 +28,7 @@ import {
   useSignVisit,
   useVisit,
 } from '@/features/visits/flow'
+import { useReadOnly } from '@/hooks/use-read-only'
 import { api } from '@/lib/api'
 import { useAuthStore } from '@/lib/auth-store'
 import type { ClinicalRecordSections, VisitOutcome } from '@/types/clinical'
@@ -48,6 +49,7 @@ function fmt(iso: string) {
 export default function VisitPage() {
   const { id } = useParams<{ id: string }>()
   const role = useAuthStore((s) => s.role)
+  const readOnly = useReadOnly()
   const { data: visit, isLoading, isError } = useVisit(id)
   const { data: patient } = usePatient(visit?.patientId ?? '')
 
@@ -153,13 +155,15 @@ export default function VisitPage() {
         </div>
 
         <div className="flex gap-2">
-          {canStart && (
+          {!readOnly && canStart && (
             <Button onClick={startVisit} disabled={checkIn.isPending}>
               {checkIn.isPending ? <Loader2 size={18} className="animate-spin" /> : <MapPin size={18} />}
               Iniciar visita
             </Button>
           )}
-          {inProgress && <Button onClick={() => setCloseOpen(true)}>Cerrar visita</Button>}
+          {!readOnly && inProgress && (
+            <Button onClick={() => setCloseOpen(true)}>Cerrar visita</Button>
+          )}
         </div>
       </div>
 

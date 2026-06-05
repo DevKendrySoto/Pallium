@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select'
 import { MODALITY_LABELS, REASON_LABELS, TYPE_LABELS } from '@/features/visits/constants'
 import { useCreateVisit } from '@/features/visits/hooks'
+import { useReadOnly } from '@/hooks/use-read-only'
 
 const schema = z
   .object({
@@ -55,6 +56,7 @@ type FormValues = z.infer<typeof schema>
 
 export function CreateVisitDialog({ defaultDateTime }: { defaultDateTime?: string }) {
   const [open, setOpen] = useState(false)
+  const readOnly = useReadOnly()
   const createVisit = useCreateVisit()
 
   const form = useForm<FormValues>({
@@ -88,6 +90,8 @@ export function CreateVisitDialog({ defaultDateTime }: { defaultDateTime?: strin
       },
     )
   }
+
+  if (readOnly) return null
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

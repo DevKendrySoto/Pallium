@@ -15,4 +15,5 @@ export interface AuthUser {
   fullName?: string
   roles: Role[]
   permissions: string[]
+  isReadOnly?: boolean
 }
