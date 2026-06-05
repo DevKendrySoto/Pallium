@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { DynamicForm } from '@/components/visits/clinical/dynamic-form'
+import { SignaturePad } from '@/components/visits/signature-pad'
 import { VisitStatusBadge, VisitTypeBadge } from '@/components/visits/visit-badges'
 import { Button } from '@/components/ui/button'
 import {
@@ -73,6 +74,7 @@ export default function VisitPage() {
   const [outcome, setOutcome] = useState<VisitOutcome>('COMPLETED')
   const [reason, setReason] = useState('')
   const [signerName, setSignerName] = useState('')
+  const [signatureKey, setSignatureKey] = useState<string | null>(null)
 
   const recordSpecialty = useMemo(
     () => roleToSpecialty(role) ?? template?.specialty ?? 'MEDICINE',
@@ -113,7 +115,7 @@ export default function VisitPage() {
       )
     if (outcome === 'COMPLETED' && signerName.trim()) {
       sign.mutate(
-        { storageKey: `manual/${id}`, signerName },
+        { storageKey: signatureKey ?? `manual/${id}`, signerName },
         { onSuccess: finish, onError: finish },
       )
     } else {
@@ -241,6 +243,7 @@ export default function VisitPage() {
                   value={signerName}
                   onChange={(e) => setSignerName(e.target.value)}
                 />
+                <SignaturePad patientId={visit.patientId} onUploaded={setSignatureKey} />
               </div>
             )}
           </div>

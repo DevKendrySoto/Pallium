@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { MedicationDelta } from '@/components/visits/clinical/medication-delta'
+import { PhotoAttachment } from '@/components/visits/clinical/photo-attachment'
 import { ScaleApplication } from '@/components/visits/clinical/scale-application'
 import { WoundTracker } from '@/components/visits/clinical/wound-tracker'
 import type {
@@ -179,6 +180,7 @@ const RENDERERS: Record<string, React.ComponentType<CompProps>> = {
   RecommendationsList,
   WoundTracker,
   MedicationDelta,
+  PhotoAttachment,
 }
 
 function ComponentRenderer({
