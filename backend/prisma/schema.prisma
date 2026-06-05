@@ -1,0 +1,1179 @@
+// ============================================================================
+//  Pallium — Sistema de Cuidados Paliativos y Crónicos
+//  Esquema de base de datos (Prisma + PostgreSQL 16)
+// ----------------------------------------------------------------------------
+//  Convenciones:
+//   - IDs: cuid()  ·  Tablas/columnas en snake_case vía @@map/@map.
+//   - Tablas de catálogo (Role, PatientCategory, ScaleDefinition) se llenan por seed.
+//   - Borrado lógico (deletedAt) solo donde la trazabilidad clínica lo exige.
+//   - AuditLog es append-only; nunca se actualiza ni borra.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // La URL de conexión se define en prisma.config.ts (Prisma 7+).
+}
+
+// ============================================================================
+//  ENUMS  (máquinas de estado y vocabularios cerrados)
+// ============================================================================
+
+/// Estado del paciente — máquina de estados cerrada.
+/// PENDING_APPROVAL → ACTIVE → (PASSIVE ⇄ ACTIVE) → DECEASED
+enum PatientStatus {
+  PENDING_APPROVAL // Pendiente Aprobación
+  ACTIVE // Activo
+  PASSIVE // Pasivo
+  DECEASED // Deceso
+}
+
+enum Sex {
+  MALE
+  FEMALE
+  OTHER
+  UNKNOWN
+}
+
+enum IdentificationType {
+  CEDULA
+  PASSPORT
+  BIRTH_CERTIFICATE // útil en paliativo infantil
+  FOREIGN_ID
+  OTHER
+}
+
+/// Especialidades clínicas. Cada una corresponde a una tabla de nota clínica.
+enum Specialty {
+  MEDICINE // Médico
+  NURSING // Enfermería
+  PSYCHOLOGY // Psicología
+  SOCIAL_WORK // Trabajo Social
+  PHYSIOTHERAPY // Fisiatra / Terapia Física
+}
+
+/// REGULAR = cadencia de 30 días.  EXTRAORDINARY = rompe la cadencia.
+enum VisitType {
+  REGULAR
+  EXTRAORDINARY
+}
+
+/// Motivo de visita extraordinaria (no cambia el estado del paciente).
+enum ExtraordinaryReason {
+  EMERGENCY // Emergencia
+  ANTIBIOTIC_THERAPY // Antibioterapia
+  SPECIAL_FOLLOWUP // Seguimiento especial
+  WOUND_CARE // Curación
+}
+
+enum VisitModality {
+  HOME // Domiciliaria (entra en rutas)
+  CLINIC // En sede
+  TELEHEALTH // Teleconsulta
+}
+
+/// Resultado del cierre de una visita (precisa el motivo más allá del status).
+enum VisitOutcome {
+  COMPLETED // realizada
+  PATIENT_NOT_HOME // fuera de casa
+  OUT_OF_TIME // fuera de tiempo
+  REFUSED // rehúso de atención
+}
+
+enum VisitStatus {
+  SCHEDULED // Agendada
+  CONFIRMED // Confirmada con paciente/familia
+  EN_ROUTE // Chofer en camino (domiciliaria)
+  IN_PROGRESS // En curso (check-in hecho)
+  COMPLETED // Realizada
+  CANCELLED // Cancelada
+  NO_SHOW // Paciente ausente / no atendida
+  RESCHEDULED // Reagendada (apunta a la nueva visita)
+}
+
+enum RouteStatus {
+  DRAFT // En construcción por Agenda
+  PLANNED // Confirmada, lista para despachar
+  DISPATCHED // Enviada al chofer por WhatsApp
+  IN_PROGRESS // Ruta en ejecución
+  COMPLETED
+  CANCELLED
+}
+
+enum DispatchChannel {
+  WHATSAPP
+  SMS
+  MANUAL
+}
+
+enum DispatchStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum ScaleCategory {
+  FUNCTIONAL // p. ej. Karnofsky, Barthel, PPS
+  PROGNOSTIC // p. ej. PaP Score, PPI
+  SYMPTOM // p. ej. ESAS
+  PAIN // p. ej. EVA, PAINAD
+  NUTRITIONAL
+  PSYCHOSOCIAL
+  COGNITIVE // p. ej. Pfeiffer, MMSE
+  QUALITY_OF_LIFE // p. ej. POS, EQ-5D, PedsQL
+  CAREGIVER // p. ej. Zarit
+  COMPLEXITY // p. ej. IDC-Pal, NANEAS
+}
+
+enum AlertType {
+  CLINICAL // derivada de hallazgos clínicos
+  SCALE_TRIGGERED // disparada por umbral de escala
+  CADENCE // visita regular vencida / por vencer
+  ADMINISTRATIVE // aprobación pendiente, documentos faltantes
+  MEDICATION // p. ej. fin de antibioterapia
+}
+
+enum AlertSeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+enum DiagnosisType {
+  PRIMARY
+  SECONDARY
+}
+
+enum DiagnosisStatus {
+  ACTIVE
+  RESOLVED
+  RULED_OUT
+}
+
+enum MedicationStatus {
+  ACTIVE
+  SUSPENDED
+  COMPLETED
+  CANCELLED
+}
+
+/// Tipos de evento del timeline del paciente (vista agregada).
+enum TimelineEventType {
+  REGISTRATION
+  STATUS_CHANGE
+  VISIT_SCHEDULED
+  VISIT_COMPLETED
+  CLINICAL_NOTE
+  SCALE_ASSESSMENT
+  ALERT_RAISED
+  ALERT_RESOLVED
+  DIAGNOSIS_ADDED
+  MEDICATION_CHANGE
+  DOCUMENT_UPLOADED
+  ADMISSION_APPROVED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  READ // lectura sensible (p. ej. apertura de historia clínica)
+  LOGIN
+  LOGOUT
+  EXPORT
+  STATUS_TRANSITION
+  DISPATCH
+}
+
+// ============================================================================
+//  AUTENTICACIÓN Y RBAC
+// ============================================================================
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  fullName     String     @map("full_name")
+  phone        String?
+  /// Para profesionales clínicos: matrícula/registro profesional.
+  licenseNo    String?    @map("license_no")
+  /// Especialidad principal del profesional (null para Admin/Agenda/Auditor).
+  specialty    Specialty?
+  isActive     Boolean    @default(true) @map("is_active")
+  lastLoginAt  DateTime?  @map("last_login_at")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // RBAC
+  roles UserRole[]
+
+  // Sesiones / tokens
+  refreshTokens RefreshToken[]
+
+  // Trazas y autoría
+  visitAssignments   VisitAssignment[]
+  authoredRecords    ClinicalRecord[]
+  scaleAssessments   ScaleAssessment[]
+  diagnosesAuthored  Diagnosis[]            @relation("DiagnosisAuthor")
+  prescriptions      Medication[]           @relation("MedicationPrescriber")
+  vitalsRecorded     VitalSigns[]
+  approvedPatients   Patient[]              @relation("PatientApprover")
+  statusChanges      PatientStatusHistory[] @relation("StatusChanger")
+  resolvedAlerts     Alert[]                @relation("AlertResolver")
+  acknowledgedAlerts Alert[]                @relation("AlertAcknowledger")
+  timelineEvents     TimelineEvent[]
+  auditLogs          AuditLog[]
+  dispatchedRoutes   Route[]                @relation("RouteDispatcher")
+
+  @@index([specialty])
+  @@map("users")
+}
+
+model Role {
+  id          String  @id @default(cuid())
+  /// Código estable usado en código/JWT (ADMIN, AGENDA, MEDICO, ENFERMERIA, ...).
+  code        String  @unique
+  name        String
+  description String?
+  /// Roles del sistema no se pueden borrar (Admin, Auditor, ...).
+  isSystem    Boolean @default(false) @map("is_system")
+  /// Auditor = solo lectura. Atajo para el guard, además de los permisos.
+  isReadOnly  Boolean @default(false) @map("is_read_only")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  /// Formato "recurso:acción", p. ej. "patient:approve", "visit:schedule".
+  code        String  @unique
+  description String?
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model UserRole {
+  userId String @map("user_id")
+  roleId String @map("role_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  roleId       String     @map("role_id")
+  permissionId String     @map("permission_id")
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Hash del refresh token (nunca se guarda en claro).
+  tokenHash String    @unique @map("token_hash")
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ============================================================================
+//  PACIENTE Y ENTORNO
+// ============================================================================
+
+/// Catálogo extensible de categorías (Paliativo Infantil, Adulto, Crónico, Oncológico, ...).
+model PatientCategory {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  name        String
+  description String?
+  isActive    Boolean @default(true) @map("is_active")
+
+  patients Patient[]
+
+  @@map("patient_categories")
+}
+
+model Patient {
+  id  String @id @default(cuid())
+  /// Número de historia / expediente legible.
+  mrn String @unique
+
+  // Identificación
+  identificationType IdentificationType @map("identification_type")
+  identificationNo   String             @map("identification_no")
+
+  // Datos personales
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  birthDate DateTime @map("birth_date")
+  sex       Sex
+  phone     String?
+  email     String?
+
+  // Clasificación y estado
+  categoryId String          @map("category_id")
+  category   PatientCategory @relation(fields: [categoryId], references: [id])
+  status     PatientStatus   @default(PENDING_APPROVAL)
+
+  // Admisión / aprobación
+  approvedById String?   @map("approved_by_id")
+  approvedBy   User?     @relation("PatientApprover", fields: [approvedById], references: [id])
+  approvedAt   DateTime? @map("approved_at")
+  admittedAt   DateTime? @map("admitted_at")
+  deceasedAt   DateTime? @map("deceased_at")
+
+  // Cadencia: próxima visita regular calculada (cada 30 días desde la última).
+  lastRegularVisitAt  DateTime? @map("last_regular_visit_at")
+  nextRegularVisitDue DateTime? @map("next_regular_visit_due")
+
+  /// Contador de rehúsos de atención (lo incrementa el cierre de visita REFUSED).
+  refusalCount Int @default(0) @map("refusal_count")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  addresses        PatientAddress[]
+  caregivers       Caregiver[]
+  visits           Visit[]
+  clinicalRecords  ClinicalRecord[]
+  scaleAssessments ScaleAssessment[]
+  diagnoses        Diagnosis[]
+  medications      Medication[]
+  alerts           Alert[]
+  timeline         TimelineEvent[]
+  statusHistory    PatientStatusHistory[]
+  documents        Document[]
+  allergies        Allergy[]
+  medicalHistory   MedicalHistory[]
+  habits           Habit[]
+  advanceDirective AdvanceDirective?
+  familyMembers    FamilyMember[]
+  immunizations    Immunization[]
+  socialProfile    SocialProfile?
+  /// Estructura del genograma (diagrama familiar).
+  genogram         Json?
+
+  @@unique([identificationType, identificationNo])
+  @@index([status])
+  @@index([categoryId])
+  @@index([nextRegularVisitDue])
+  @@map("patients")
+}
+
+model PatientStatusHistory {
+  id          String         @id @default(cuid())
+  patientId   String         @map("patient_id")
+  patient     Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fromStatus  PatientStatus? @map("from_status")
+  toStatus    PatientStatus  @map("to_status")
+  reason      String?
+  changedById String         @map("changed_by_id")
+  changedBy   User           @relation("StatusChanger", fields: [changedById], references: [id])
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  @@index([patientId])
+  @@map("patient_status_history")
+}
+
+/// Domicilios del paciente. La dirección de la visita domiciliaria se geocodifica para rutas.
+model PatientAddress {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  label     String? // "Casa", "Casa de hija", ...
+  line1     String
+  line2     String?
+  city      String
+  province  String?
+  reference String? // referencia/cómo llegar para el chofer
+  latitude  Float?
+  longitude Float?
+  isPrimary Boolean @default(false) @map("is_primary")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  visits Visit[]
+
+  @@index([patientId])
+  @@map("patient_addresses")
+}
+
+/// Cuidador / contacto familiar (no es usuario del sistema).
+model Caregiver {
+  id             String  @id @default(cuid())
+  patientId      String  @map("patient_id")
+  patient        Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fullName       String  @map("full_name")
+  relationship   String? // hijo/a, cónyuge, ...
+  phone          String?
+  isPrimary      Boolean @default(false) @map("is_primary")
+  // Fase 2: contexto del cuidador para el perfil social.
+  isCohabitant   Boolean @default(false) @map("is_cohabitant")
+  burdenFlag     Boolean @default(false) @map("burden_flag")
+  lastZaritScore Float?  @map("last_zarit_score")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("caregivers")
+}
+
+// ============================================================================
+//  AGENDA / VISITAS  (una "Cita" agendada ES una Visit)
+// ============================================================================
+
+model Visit {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  type   VisitType
+  /// Obligatorio solo cuando type = EXTRAORDINARY.
+  reason ExtraordinaryReason?
+
+  modality VisitModality @default(HOME)
+  status   VisitStatus   @default(SCHEDULED)
+
+  // Agenda
+  scheduledDate DateTime @map("scheduled_date")
+  durationMin   Int?     @map("duration_min")
+
+  // Domicilio elegido (si modality = HOME)
+  addressId String?         @map("address_id")
+  address   PatientAddress? @relation(fields: [addressId], references: [id])
+
+  // Ejecución
+  checkInAt    DateTime? @map("check_in_at")
+  checkInLat   Float?    @map("check_in_lat")
+  checkInLng   Float?    @map("check_in_lng")
+  completedAt  DateTime? @map("completed_at")
+  cancelReason String?   @map("cancel_reason")
+  /// Resultado preciso del cierre (independiente del status).
+  outcome      VisitOutcome?
+
+  // Firma del cuidador al cierre
+  caregiverSignatureKey String?   @map("caregiver_signature_key")
+  signerName            String?   @map("signer_name")
+  signedAt              DateTime? @map("signed_at")
+
+  // Reagendamiento (apunta a la visita que la reemplaza)
+  rescheduledToId String? @unique @map("rescheduled_to_id")
+  rescheduledTo   Visit?  @relation("Reschedule", fields: [rescheduledToId], references: [id])
+  rescheduledFrom Visit?  @relation("Reschedule")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  assignments      VisitAssignment[]
+  clinicalRecords  ClinicalRecord[]
+  scaleAssessments ScaleAssessment[]
+  routeStop        RouteStop?
+
+  @@index([patientId])
+  @@index([scheduledDate])
+  @@index([status])
+  @@index([type])
+  @@map("visits")
+}
+
+/// Asignación de profesionales a una visita (multidisciplinario → varios por visita).
+model VisitAssignment {
+  id        String    @id @default(cuid())
+  visitId   String    @map("visit_id")
+  visit     Visit     @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id])
+  specialty Specialty
+  isLead    Boolean   @default(false) @map("is_lead")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([visitId, userId])
+  @@index([userId])
+  @@map("visit_assignments")
+}
+
+// ============================================================================
+//  RUTAS DOMICILIARIAS  (choferes vía WhatsApp, no usan el sistema)
+// ============================================================================
+
+model Driver {
+  id       String  @id @default(cuid())
+  fullName String  @map("full_name")
+  /// Teléfono al que se envía la ruta por WhatsApp.
+  phone    String
+  isActive Boolean @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  routes Route[]
+
+  @@map("drivers")
+}
+
+model Route {
+  id        String      @id @default(cuid())
+  name      String? // p. ej. "Ruta Norte 2026-06-03"
+  routeDate DateTime    @map("route_date")
+  status    RouteStatus @default(DRAFT)
+
+  driverId String? @map("driver_id")
+  driver   Driver? @relation(fields: [driverId], references: [id])
+
+  notes String?
+
+  dispatchedById String?   @map("dispatched_by_id")
+  dispatchedBy   User?     @relation("RouteDispatcher", fields: [dispatchedById], references: [id])
+  dispatchedAt   DateTime? @map("dispatched_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stops      RouteStop[]
+  dispatches RouteDispatch[]
+
+  @@index([routeDate])
+  @@index([status])
+  @@map("routes")
+}
+
+model RouteStop {
+  id      String @id @default(cuid())
+  routeId String @map("route_id")
+  route   Route  @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  /// Cada parada corresponde a una visita domiciliaria.
+  visitId String @unique @map("visit_id")
+  visit   Visit  @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  sequence       Int
+  plannedArrival DateTime? @map("planned_arrival")
+  arrivedAt      DateTime? @map("arrived_at")
+  completed      Boolean   @default(false)
+
+  @@unique([routeId, sequence])
+  @@index([routeId])
+  @@map("route_stops")
+}
+
+/// Registro de cada envío de la ruta al chofer (WhatsApp) con estado de entrega.
+model RouteDispatch {
+  id                String          @id @default(cuid())
+  routeId           String          @map("route_id")
+  route             Route           @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  channel           DispatchChannel @default(WHATSAPP)
+  toPhone           String          @map("to_phone")
+  message           String
+  status            DispatchStatus  @default(PENDING)
+  /// ID del proveedor de mensajería (p. ej. WhatsApp Business API).
+  providerMessageId String?         @map("provider_message_id")
+  error             String?
+  sentAt            DateTime?       @map("sent_at")
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  @@index([routeId])
+  @@map("route_dispatches")
+}
+
+// ============================================================================
+//  REGISTRO CLÍNICO  (base + extensiones 1:1 por especialidad)
+// ============================================================================
+
+model ClinicalRecord {
+  id        String    @id @default(cuid())
+  patientId String    @map("patient_id")
+  patient   Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  visitId   String?   @map("visit_id")
+  visit     Visit?    @relation(fields: [visitId], references: [id])
+  specialty Specialty
+  authorId  String    @map("author_id")
+  author    User      @relation(fields: [authorId], references: [id])
+
+  recordedAt DateTime @default(now()) @map("recorded_at")
+  /// Resumen libre; el detalle estructurado va en la extensión por especialidad.
+  summary    String?
+
+  /// Plantilla dinámica usada (key) y su contenido serializado (sections/components/fields).
+  templateKey String? @map("template_key")
+  data        Json?
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  medicalNote       MedicalNote?
+  nursingNote       NursingNote?
+  psychologyNote    PsychologyNote?
+  socialWorkNote    SocialWorkNote?
+  physiotherapyNote PhysiotherapyNote?
+  vitalSigns        VitalSigns[]
+
+  @@index([patientId])
+  @@index([visitId])
+  @@index([specialty])
+  @@map("clinical_records")
+}
+
+/// Definición de plantilla clínica dinámica (rol × categoría) que consume el frontend.
+model ClinicalTemplate {
+  id           String     @id @default(cuid())
+  /// Clave estable, p. ej. "medical_adult_palliative".
+  key          String     @unique
+  name         String
+  /// Especialidad/rol que la completa (null para telefónica/duelo).
+  specialty    Specialty?
+  /// Categoría de paciente a la que aplica (code) o null = todas.
+  categoryCode String?    @map("category_code")
+  version      Int        @default(1)
+  /// Estructura: sections[] con components[] y fields[].
+  sections     Json
+  isActive     Boolean    @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([specialty])
+  @@map("clinical_templates")
+}
+
+model MedicalNote {
+  id       String         @id @default(cuid())
+  recordId String         @unique @map("record_id")
+  record   ClinicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  chiefComplaint String? @map("chief_complaint")
+  presentIllness String? @map("present_illness")
+  physicalExam   String? @map("physical_exam")
+  assessment     String?
+  plan           String?
+  prognosis      String?
+
+  @@map("medical_notes")
+}
+
+model NursingNote {
+  id       String         @id @default(cuid())
+  recordId String         @unique @map("record_id")
+  record   ClinicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  generalCare      String? @map("general_care")
+  woundCare        String? @map("wound_care") // curaciones
+  medicationAdmin  String? @map("medication_admin")
+  deviceManagement String? @map("device_management") // sondas, catéteres
+  patientEducation String? @map("patient_education")
+
+  @@map("nursing_notes")
+}
+
+model PsychologyNote {
+  id       String         @id @default(cuid())
+  recordId String         @unique @map("record_id")
+  record   ClinicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  emotionalState String? @map("emotional_state")
+  mentalStatus   String? @map("mental_status")
+  riskAssessment String? @map("risk_assessment") // riesgo suicida, duelo
+  interventions  String?
+  plan           String?
+
+  @@map("psychology_notes")
+}
+
+model SocialWorkNote {
+  id       String         @id @default(cuid())
+  recordId String         @unique @map("record_id")
+  record   ClinicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  socioeconomic   String?
+  familySupport   String? @map("family_support")
+  homeEnvironment String? @map("home_environment")
+  resources       String? // recursos/beneficios gestionados
+  interventions   String?
+
+  @@map("social_work_notes")
+}
+
+model PhysiotherapyNote {
+  id       String         @id @default(cuid())
+  recordId String         @unique @map("record_id")
+  record   ClinicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  functionalAssessment String? @map("functional_assessment")
+  mobility             String?
+  exercisesPrescribed  String? @map("exercises_prescribed")
+  goals                String?
+  progress             String?
+
+  @@map("physiotherapy_notes")
+}
+
+/// Signos vitales (los toma enfermería/médico). Ligados a un registro clínico.
+model VitalSigns {
+  id       String         @id @default(cuid())
+  recordId String         @map("record_id")
+  record   ClinicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  measuredAt   DateTime @default(now()) @map("measured_at")
+  measuredById String   @map("measured_by_id")
+  measuredBy   User     @relation(fields: [measuredById], references: [id])
+
+  systolicBp      Int?   @map("systolic_bp")
+  diastolicBp     Int?   @map("diastolic_bp")
+  heartRate       Int?   @map("heart_rate")
+  respiratoryRate Int?   @map("respiratory_rate")
+  temperatureC    Float? @map("temperature_c")
+  spo2            Int?
+  painScore       Int?   @map("pain_score") // 0-10
+  weightKg        Float? @map("weight_kg")
+  glucoseMgDl     Float? @map("glucose_mg_dl")
+
+  @@index([recordId])
+  @@map("vital_signs")
+}
+
+// ============================================================================
+//  DIAGNÓSTICOS Y MEDICACIÓN
+// ============================================================================
+
+model Diagnosis {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  /// Código CIE-10 / ICD-10.
+  code        String?
+  description String
+  type        DiagnosisType   @default(SECONDARY)
+  status      DiagnosisStatus @default(ACTIVE)
+  onsetDate   DateTime?       @map("onset_date")
+
+  recordedById String @map("recorded_by_id")
+  recordedBy   User   @relation("DiagnosisAuthor", fields: [recordedById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("diagnoses")
+}
+
+model Medication {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  drug      String
+  dose      String?
+  route     String? // vía: oral, IV, SC...
+  frequency String?
+  /// Relevante para antibioterapia: fechas acotan el tratamiento.
+  startDate DateTime         @map("start_date")
+  endDate   DateTime?        @map("end_date")
+  status    MedicationStatus @default(ACTIVE)
+  notes     String?
+
+  prescribedById String @map("prescribed_by_id")
+  prescribedBy   User   @relation("MedicationPrescriber", fields: [prescribedById], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@index([status])
+  @@map("medications")
+}
+
+// ============================================================================
+//  ESCALAS FUNCIONALES Y PRONÓSTICAS
+// ============================================================================
+
+/// Catálogo de escalas (Karnofsky, ECOG, PPS, Barthel, ESAS, PaP, PAINAD...).
+model ScaleDefinition {
+  id          String        @id @default(cuid())
+  code        String        @unique // KARNOFSKY, ECOG, BARTHEL, ESAS, ...
+  name        String
+  category    ScaleCategory
+  description String?
+  /// Definición de ítems/opciones/puntajes y reglas de interpretación.
+  schema      Json
+  /// Umbrales que disparan alertas (p. ej. {"max": 40}). Opcional.
+  alertRule   Json?         @map("alert_rule")
+  isActive    Boolean       @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  assessments ScaleAssessment[]
+
+  @@map("scale_definitions")
+}
+
+model ScaleAssessment {
+  id        String          @id @default(cuid())
+  patientId String          @map("patient_id")
+  patient   Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  scaleId   String          @map("scale_id")
+  scale     ScaleDefinition @relation(fields: [scaleId], references: [id])
+  visitId   String?         @map("visit_id")
+  visit     Visit?          @relation(fields: [visitId], references: [id])
+
+  assessedById String   @map("assessed_by_id")
+  assessedBy   User     @relation(fields: [assessedById], references: [id])
+  assessedAt   DateTime @default(now()) @map("assessed_at")
+
+  /// Respuestas por ítem.
+  items          Json
+  /// Puntaje total calculado.
+  score          Float?
+  interpretation String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([patientId])
+  @@index([scaleId])
+  @@index([visitId])
+  @@map("scale_assessments")
+}
+
+// ============================================================================
+//  ALERTAS
+// ============================================================================
+
+model Alert {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  type     AlertType
+  severity AlertSeverity @default(MEDIUM)
+  status   AlertStatus   @default(OPEN)
+  title    String
+  message  String?
+
+  /// Referencia polimórfica blanda al origen (p. ej. "scale_assessment", id).
+  sourceType String? @map("source_type")
+  sourceId   String? @map("source_id")
+
+  acknowledgedById String?   @map("acknowledged_by_id")
+  acknowledgedBy   User?     @relation("AlertAcknowledger", fields: [acknowledgedById], references: [id])
+  acknowledgedAt   DateTime? @map("acknowledged_at")
+
+  resolvedById String?   @map("resolved_by_id")
+  resolvedBy   User?     @relation("AlertResolver", fields: [resolvedById], references: [id])
+  resolvedAt   DateTime? @map("resolved_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@index([status])
+  @@index([severity])
+  @@map("alerts")
+}
+
+// ============================================================================
+//  TIMELINE  (vista cronológica agregada por paciente)
+// ============================================================================
+
+model TimelineEvent {
+  id          String            @id @default(cuid())
+  patientId   String            @map("patient_id")
+  patient     Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  type        TimelineEventType
+  title       String
+  description String?
+  occurredAt  DateTime          @map("occurred_at")
+
+  actorId String? @map("actor_id")
+  actor   User?   @relation(fields: [actorId], references: [id])
+
+  /// Referencia polimórfica blanda a la entidad de origen.
+  sourceType String? @map("source_type")
+  sourceId   String? @map("source_id")
+  metadata   Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([patientId, occurredAt])
+  @@map("timeline_events")
+}
+
+// ============================================================================
+//  DOCUMENTOS  (archivos en MinIO / S3)
+// ============================================================================
+
+model Document {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  fileName    String  @map("file_name")
+  contentType String  @map("content_type")
+  sizeBytes   Int     @map("size_bytes")
+  /// Clave del objeto en MinIO/S3 (no se guarda el binario en la DB).
+  storageKey  String  @unique @map("storage_key")
+  category    String? // "consentimiento", "estudio", "receta", ...
+
+  uploadedById String   @map("uploaded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([patientId])
+  @@map("documents")
+}
+
+// ============================================================================
+//  AUDITORÍA  (append-only · el rol Auditor lee todo, no escribe)
+// ============================================================================
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  actorId    String?     @map("actor_id")
+  actor      User?       @relation(fields: [actorId], references: [id])
+  action     AuditAction
+  entityType String      @map("entity_type")
+  entityId   String?     @map("entity_id")
+  /// Estado anterior y posterior para acciones de escritura.
+  before     Json?
+  after      Json?
+  ipAddress  String?     @map("ip_address")
+  userAgent  String?     @map("user_agent")
+  createdAt  DateTime    @default(now()) @map("created_at")
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+//  PERFIL CLÍNICO PERSISTENTE — Fase 1
+//  (Alergias, antecedentes, hábitos tóxicos, voluntades anticipadas)
+//  Provenance: recordedById se guarda como escalar (sin relación a User) para
+//  mantener estos modelos de perfil desacoplados; el "quién" también queda en
+//  el timeline/auditoría.
+// ============================================================================
+
+enum AllergyType {
+  MEDICATION
+  FOOD
+  ENVIRONMENTAL
+  OTHER
+}
+
+enum AllergySeverity {
+  MILD
+  MODERATE
+  SEVERE
+}
+
+model Allergy {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  substance String
+  type      AllergyType     @default(OTHER)
+  reaction  String?
+  severity  AllergySeverity @default(MODERATE)
+  isActive  Boolean         @default(true) @map("is_active")
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("allergies")
+}
+
+enum HistoryCategory {
+  PERSONAL
+  SURGICAL
+  FAMILY
+  OBSTETRIC
+}
+
+model MedicalHistory {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  category    HistoryCategory @default(PERSONAL)
+  description String
+  year        Int?
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("medical_history")
+}
+
+enum HabitType {
+  TOBACCO
+  ALCOHOL
+  DRUGS
+  OTHER
+}
+
+enum HabitStatus {
+  NEVER
+  ACTIVE
+  FORMER
+}
+
+model Habit {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  type     HabitType
+  status   HabitStatus @default(NEVER)
+  detail   String?
+  quantity String?
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Un registro por tipo de hábito por paciente.
+  @@unique([patientId, type])
+  @@map("habits")
+}
+
+/// Voluntades anticipadas (1:1 con el paciente). Inmutables una vez firmadas (regla en servicio).
+model AdvanceDirective {
+  id        String  @id @default(cuid())
+  patientId String  @unique @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  dnr                    Boolean   @default(false)
+  preferredPlaceOfCare   String?   @map("preferred_place_of_care")
+  lifeSupportPreferences String?   @map("life_support_preferences")
+  proxyName              String?   @map("proxy_name")
+  proxyPhone             String?   @map("proxy_phone")
+  documentKey            String?   @map("document_key")
+  signedAt               DateTime? @map("signed_at")
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("advance_directives")
+}
+
+// ============================================================================
+//  PERFIL CLÍNICO PERSISTENTE — Fase 2
+//  (Familia + genograma, vivienda/socioeconómico, inmunizaciones)
+// ============================================================================
+
+enum FamilyRole {
+  CAREGIVER
+  DEPENDENT
+  SUPPORT
+  NONE
+}
+
+model FamilyMember {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  name         String
+  relationship String
+  age          Int?
+  alive        Boolean    @default(true)
+  role         FamilyRole @default(NONE)
+  notes        String?
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("family_members")
+}
+
+/// Vivienda y situación socioeconómica (1:1 con el paciente).
+model SocialProfile {
+  id        String  @id @default(cuid())
+  patientId String  @unique @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  housingType   String? @map("housing_type")
+  accessibility String?
+  basicServices String? @map("basic_services")
+  incomeLevel   String? @map("income_level")
+  occupation    String?
+  insurance     String?
+  dependents    Int?
+  notes         String?
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("social_profiles")
+}
+
+model Immunization {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  vaccine String
+  date    DateTime
+  dose    String?
+  lot     String?
+  notes   String?
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("immunizations")
+}

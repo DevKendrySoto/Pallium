@@ -1,0 +1,5 @@
+echo "🔎 pre-commit · frontend (lint + typecheck)"
+( cd frontend && npm run lint && npm run typecheck ) || exit 1
+
+echo "🔎 pre-commit · backend (lint + typecheck + test)"
+( cd backend && npm run lint && npm run typecheck && npm test ) || exit 1
