@@ -1,14 +1,17 @@
 import {
   AllergySeverity,
   AllergyType,
+  FamilyRole,
   HabitStatus,
   HabitType,
   HistoryCategory,
 } from '@prisma/client'
 import {
   IsBoolean,
+  IsDateString,
   IsEnum,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
   Max,
@@ -59,4 +62,73 @@ export class UpsertDirectiveDto {
   @IsOptional() @IsString() proxyPhone?: string
   /** Si true, firma el documento (lo vuelve inmutable). */
   @IsOptional() @IsBoolean() sign?: boolean
+}
+
+// ---- Fase 2 ----
+
+export class CreateCaregiverDto {
+  @IsString() @MinLength(2) fullName!: string
+  @IsOptional() @IsString() relationship?: string
+  @IsOptional() @IsString() phone?: string
+  @IsOptional() @IsBoolean() isPrimary?: boolean
+  @IsOptional() @IsBoolean() isCohabitant?: boolean
+  @IsOptional() @IsBoolean() burdenFlag?: boolean
+}
+
+export class UpdateCaregiverDto {
+  @IsOptional() @IsString() @MinLength(2) fullName?: string
+  @IsOptional() @IsString() relationship?: string
+  @IsOptional() @IsString() phone?: string
+  @IsOptional() @IsBoolean() isPrimary?: boolean
+  @IsOptional() @IsBoolean() isCohabitant?: boolean
+  @IsOptional() @IsBoolean() burdenFlag?: boolean
+}
+
+export class CreateFamilyMemberDto {
+  @IsString() @MinLength(2) name!: string
+  @IsString() relationship!: string
+  @IsOptional() @IsInt() @Min(0) @Max(130) age?: number
+  @IsOptional() @IsBoolean() alive?: boolean
+  @IsEnum(FamilyRole) role!: FamilyRole
+  @IsOptional() @IsString() notes?: string
+}
+
+export class UpdateFamilyMemberDto {
+  @IsOptional() @IsString() @MinLength(2) name?: string
+  @IsOptional() @IsString() relationship?: string
+  @IsOptional() @IsInt() @Min(0) @Max(130) age?: number
+  @IsOptional() @IsBoolean() alive?: boolean
+  @IsOptional() @IsEnum(FamilyRole) role?: FamilyRole
+  @IsOptional() @IsString() notes?: string
+}
+
+export class GenogramDto {
+  @IsObject() genogram!: Record<string, unknown>
+}
+
+export class UpsertSocialProfileDto {
+  @IsOptional() @IsString() housingType?: string
+  @IsOptional() @IsString() accessibility?: string
+  @IsOptional() @IsString() basicServices?: string
+  @IsOptional() @IsString() incomeLevel?: string
+  @IsOptional() @IsString() occupation?: string
+  @IsOptional() @IsString() insurance?: string
+  @IsOptional() @IsInt() @Min(0) @Max(50) dependents?: number
+  @IsOptional() @IsString() notes?: string
+}
+
+export class CreateImmunizationDto {
+  @IsString() @MinLength(2) vaccine!: string
+  @IsDateString() date!: string
+  @IsOptional() @IsString() dose?: string
+  @IsOptional() @IsString() lot?: string
+  @IsOptional() @IsString() notes?: string
+}
+
+export class UpdateImmunizationDto {
+  @IsOptional() @IsString() @MinLength(2) vaccine?: string
+  @IsOptional() @IsDateString() date?: string
+  @IsOptional() @IsString() dose?: string
+  @IsOptional() @IsString() lot?: string
+  @IsOptional() @IsString() notes?: string
 }
