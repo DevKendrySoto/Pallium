@@ -116,6 +116,10 @@ enum ScaleCategory {
   PAIN // p. ej. EVA, PAINAD
   NUTRITIONAL
   PSYCHOSOCIAL
+  COGNITIVE // p. ej. Pfeiffer, MMSE
+  QUALITY_OF_LIFE // p. ej. POS, EQ-5D, PedsQL
+  CAREGIVER // p. ej. Zarit
+  COMPLEXITY // p. ej. IDC-Pal, NANEAS
 }
 
 enum AlertType {

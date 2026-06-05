@@ -2,7 +2,12 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { AlertType, type Prisma, TimelineEventType } from '@prisma/client'
 import { AlertsService } from '../alerts/alerts.service'
 import { PrismaService } from '../prisma/prisma.service'
-import { computeScore, evaluateAlertRule, type ScaleItems } from './domain/scoring'
+import {
+  computeScore,
+  deriveInterpretation,
+  evaluateAlertRule,
+  type ScaleItems,
+} from './domain/scoring'
 import type { AssessScaleDto, ListAssessmentsDto } from './dto/assess-scale.dto'
 import { ScalesRepository } from './scales.repository'
 
@@ -38,7 +43,10 @@ export class ScalesService {
     if (!patient) throw new NotFoundException('Paciente no encontrado')
 
     const items = dto.items as ScaleItems
-    const score = computeScore(def.schema as Record<string, unknown>, items)
+    const schema = def.schema as Record<string, unknown>
+    const score = computeScore(schema, items)
+    // La interpretación explícita gana; si no, se deriva de bandas/clasificación.
+    const interpretation = dto.interpretation ?? deriveInterpretation(schema, score, items) ?? undefined
 
     const assessment = await this.repo.createAssessment({
       patient: { connect: { id: dto.patientId } },
@@ -47,7 +55,7 @@ export class ScalesService {
       assessedBy: { connect: { id: assessedById } },
       items: dto.items as Prisma.InputJsonValue,
       score,
-      interpretation: dto.interpretation,
+      interpretation,
     })
 
     await this.prisma.timelineEvent.create({
@@ -55,7 +63,7 @@ export class ScalesService {
         patientId: dto.patientId,
         type: TimelineEventType.SCALE_ASSESSMENT,
         title: `${def.code}${score !== null ? `: ${score}` : ''}`,
-        description: dto.interpretation,
+        description: interpretation,
         occurredAt: new Date(),
         actorId: assessedById,
         sourceType: 'scale_assessment',
