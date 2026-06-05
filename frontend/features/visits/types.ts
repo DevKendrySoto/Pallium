@@ -36,6 +36,7 @@ export interface VisitAssignment {
 
 export interface Visit {
   id: string
+  patientId: string
   type: VisitType
   reason: ExtraordinaryReason | null
   modality: VisitModality
@@ -45,6 +46,7 @@ export interface Visit {
   checkInAt: string | null
   completedAt: string | null
   cancelReason: string | null
+  outcome: 'COMPLETED' | 'PATIENT_NOT_HOME' | 'OUT_OF_TIME' | 'REFUSED' | null
   patient: VisitPatient
   assignments: VisitAssignment[]
 }
