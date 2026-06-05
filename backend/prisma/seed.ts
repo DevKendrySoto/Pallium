@@ -817,6 +817,348 @@ const TEMPLATES = [
       },
     ],
   },
+
+  // ---- Médico ----
+  {
+    key: 'medical_adult_chronic',
+    name: 'Médico · Crónico adulto',
+    specialty: Specialty.MEDICINE,
+    categoryCode: 'CHRONIC',
+    version: 1,
+    sections: [
+      { key: 'control', title: 'Evolución y control', components: [{ type: 'FieldsGroup', key: 'controlGroup', config: { columns: 1, fields: [
+        { key: 'chiefComplaint', label: 'Motivo de la visita', type: 'textarea' },
+        { key: 'baseDiseaseControl', label: 'Control de la enfermedad de base', type: 'radio', options: ['Estable', 'En ajuste', 'Descompensado'] },
+        { key: 'evolution', label: 'Evolución', type: 'textarea' },
+      ] } }] },
+      { key: 'exam', title: 'Exploración y signos vitales', components: [{ type: 'VitalSignsBlock', key: 'vitals', config: {} }] },
+      { key: 'symptoms', title: 'Síntomas', components: [{ type: 'SymptomChecklist', key: 'symptoms', config: { scale: '0-10' } }] },
+      { key: 'scales', title: 'Escalas', components: [{ type: 'ScaleApplication', key: 'scales', config: { scales: ['BARTHEL', 'LAWTON_BRODY', 'PFEIFFER'] } }] },
+      { key: 'plan', title: 'Plan y medicación', components: [
+        { type: 'MedicationDelta', key: 'medication', config: { allowActions: ['add', 'adjust', 'suspend'] } },
+        { type: 'RecommendationsList', key: 'recommendations', config: {} },
+      ] },
+      { key: 'followup', title: 'Adherencia y próxima visita', components: [
+        { type: 'AdherenceAssessment', key: 'adherence', config: { dimensions: ['medication', 'diet', 'appointments'] } },
+        { type: 'NextAppointmentScheduler', key: 'nextAppointment', config: { suggestFromCadence: true } },
+      ] },
+    ],
+  },
+  {
+    key: 'medical_adult_oncological',
+    name: 'Médico · Oncológico adulto',
+    specialty: Specialty.MEDICINE,
+    categoryCode: 'ONCOLOGIC',
+    version: 1,
+    sections: [
+      { key: 'onco', title: 'Evolución oncológica', components: [{ type: 'FieldsGroup', key: 'oncoGroup', config: { columns: 2, fields: [
+        { key: 'primarySite', label: 'Tumor primario', type: 'text' },
+        { key: 'stage', label: 'Estadio', type: 'text' },
+        { key: 'oncoTreatment', label: 'Tratamiento oncológico', type: 'radio', options: ['Activo', 'Suspendido', 'Paliativo exclusivo'] },
+        { key: 'evolution', label: 'Evolución', type: 'textarea' },
+      ] } }] },
+      { key: 'exam', title: 'Exploración y signos vitales', components: [
+        { type: 'VitalSignsBlock', key: 'vitals', config: {} },
+        { type: 'ConsciousnessLevel', key: 'consciousness', config: { scale: 'AVDI' } },
+      ] },
+      { key: 'symptoms', title: 'Síntomas', components: [{ type: 'SymptomChecklist', key: 'symptoms', config: { scale: '0-10' } }] },
+      { key: 'scales', title: 'Escalas', components: [{ type: 'ScaleApplication', key: 'scales', config: { scales: ['ECOG', 'KARNOFSKY', 'ESAS_R'] } }] },
+      { key: 'plan', title: 'Plan y medicación', components: [
+        { type: 'MedicationDelta', key: 'medication', config: { allowActions: ['add', 'adjust', 'suspend'] } },
+        { type: 'RecommendationsList', key: 'recommendations', config: {} },
+      ] },
+      { key: 'followup', title: 'Interconsultas y próxima visita', components: [
+        { type: 'InterconsultRequest', key: 'interconsult', config: { targetRoles: ['NURSING', 'PSYCHOLOGY', 'SOCIAL_WORK'] } },
+        { type: 'NextAppointmentScheduler', key: 'nextAppointment', config: { suggestFromCadence: true } },
+      ] },
+    ],
+  },
+  {
+    key: 'medical_child_palliative',
+    name: 'Médico · Paliativo infantil',
+    specialty: Specialty.MEDICINE,
+    categoryCode: 'PALLIATIVE_CHILD',
+    version: 1,
+    sections: [
+      { key: 'evolution', title: 'Evolución', components: [{ type: 'FieldsGroup', key: 'evolutionGroup', config: { columns: 1, fields: [
+        { key: 'chiefComplaint', label: 'Motivo de la visita', type: 'textarea' },
+        { key: 'evolution', label: 'Evolución', type: 'textarea' },
+        { key: 'feeding', label: 'Alimentación', type: 'radio', options: ['Oral', 'Sonda', 'Mixta'] },
+      ] } }] },
+      { key: 'exam', title: 'Exploración y signos vitales', components: [{ type: 'VitalSignsBlock', key: 'vitals', config: {} }] },
+      { key: 'pain', title: 'Dolor y síntomas', components: [
+        { type: 'ScaleApplication', key: 'pain', config: { scales: ['FLACC', 'WONG_BAKER'] } },
+        { type: 'SymptomChecklist', key: 'symptoms', config: { symptoms: ['dolor', 'disnea', 'nausea', 'irritabilidad'], scale: '0-10' } },
+      ] },
+      { key: 'scales', title: 'Estado funcional', components: [{ type: 'ScaleApplication', key: 'functional', config: { scales: ['LANSKY'] } }] },
+      { key: 'plan', title: 'Plan y medicación', components: [
+        { type: 'MedicationDelta', key: 'medication', config: { allowActions: ['add', 'adjust', 'suspend'] } },
+        { type: 'RecommendationsList', key: 'recommendations', config: {} },
+      ] },
+      { key: 'caregiver', title: 'Cuidador y próxima visita', components: [
+        { type: 'CaregiverStatus', key: 'caregiver', config: { assessBurden: true } },
+        { type: 'NextAppointmentScheduler', key: 'nextAppointment', config: { suggestFromCadence: true } },
+      ] },
+    ],
+  },
+
+  // ---- Enfermería ----
+  {
+    key: 'nursing_adult_chronic',
+    name: 'Enfermería · Crónico adulto',
+    specialty: Specialty.NURSING,
+    categoryCode: 'CHRONIC',
+    version: 1,
+    sections: [
+      { key: 'vitals', title: 'Signos vitales', components: [{ type: 'VitalSignsBlock', key: 'vitals', config: {} }] },
+      { key: 'functional', title: 'Estado funcional', components: [{ type: 'FunctionalStatus', key: 'functional', config: { mode: 'scale', scaleCode: 'BARTHEL' } }] },
+      { key: 'symptoms', title: 'Síntomas', components: [{ type: 'SymptomChecklist', key: 'symptoms', config: { scale: '0-10' } }] },
+      { key: 'wounds', title: 'Heridas y curaciones', components: [
+        { type: 'WoundTracker', key: 'wounds', config: { stagingScale: 'NPUAP' } },
+        { type: 'PhotoAttachment', key: 'photos', config: { maxPhotos: 6 } },
+      ] },
+      { key: 'medication', title: 'Medicación y adherencia', components: [
+        { type: 'MedicationDelta', key: 'medication', config: { allowActions: ['adjust', 'suspend'] } },
+        { type: 'AdherenceAssessment', key: 'adherence', config: { dimensions: ['medication', 'careplan'] } },
+      ] },
+      { key: 'caregiver', title: 'Cuidador y educación', components: [
+        { type: 'CaregiverStatus', key: 'caregiver', config: { assessBurden: true } },
+        { type: 'RecommendationsList', key: 'education', config: {} },
+      ] },
+    ],
+  },
+  {
+    key: 'nursing_child_palliative',
+    name: 'Enfermería · Paliativo infantil',
+    specialty: Specialty.NURSING,
+    categoryCode: 'PALLIATIVE_CHILD',
+    version: 1,
+    sections: [
+      { key: 'vitals', title: 'Signos vitales', components: [{ type: 'VitalSignsBlock', key: 'vitals', config: {} }] },
+      { key: 'statusPain', title: 'Estado y dolor', components: [
+        { type: 'FunctionalStatus', key: 'functional', config: { mode: 'scale', scaleCode: 'LANSKY' } },
+        { type: 'ScaleApplication', key: 'pain', config: { scales: ['FLACC'] } },
+      ] },
+      { key: 'symptoms', title: 'Síntomas', components: [{ type: 'SymptomChecklist', key: 'symptoms', config: { scale: '0-10' } }] },
+      { key: 'wounds', title: 'Heridas y cuidados', components: [
+        { type: 'WoundTracker', key: 'wounds', config: { stagingScale: 'NPUAP' } },
+        { type: 'PhotoAttachment', key: 'photos', config: { maxPhotos: 6 } },
+      ] },
+      { key: 'feeding', title: 'Alimentación y medicación', components: [
+        { type: 'FieldsGroup', key: 'feedingGroup', config: { columns: 2, fields: [
+          { key: 'feedingRoute', label: 'Vía de alimentación', type: 'radio', options: ['Oral', 'Sonda nasogástrica', 'Gastrostomía'] },
+          { key: 'intake', label: 'Ingesta', type: 'radio', options: ['Normal', 'Reducida', 'Mínima'] },
+        ] } },
+        { type: 'MedicationDelta', key: 'medication', config: { allowActions: ['adjust', 'suspend'] } },
+      ] },
+      { key: 'caregiver', title: 'Cuidador y educación', components: [
+        { type: 'CaregiverStatus', key: 'caregiver', config: { assessBurden: true } },
+        { type: 'RecommendationsList', key: 'education', config: {} },
+      ] },
+    ],
+  },
+
+  // ---- Trabajo Social ----
+  {
+    key: 'social_work_adult',
+    name: 'Trabajo social · Adulto',
+    specialty: Specialty.SOCIAL_WORK,
+    categoryCode: null,
+    version: 1,
+    sections: [
+      { key: 'socioeconomic', title: 'Situación socioeconómica', components: [{ type: 'FieldsGroup', key: 'socioGroup', config: { columns: 2, fields: [
+        { key: 'income', label: 'Nivel de ingresos', type: 'radio', options: ['Sin ingresos', 'Bajo', 'Medio', 'Alto'] },
+        { key: 'occupation', label: 'Ocupación', type: 'text' },
+        { key: 'insurance', label: 'Seguro de salud', type: 'radio', options: ['Ninguno', 'Subsidiado', 'Contributivo', 'Privado'] },
+      ] } }] },
+      { key: 'family', title: 'Composición y dinámica familiar', components: [{ type: 'FieldsGroup', key: 'familyGroup', config: { columns: 1, fields: [
+        { key: 'familyComposition', label: 'Composición familiar', type: 'textarea' },
+        { key: 'mainSupport', label: 'Apoyo principal', type: 'text' },
+        { key: 'dynamics', label: 'Dinámica familiar', type: 'textarea' },
+      ] } }] },
+      { key: 'housing', title: 'Vivienda y entorno', components: [{ type: 'FieldsGroup', key: 'housingGroup', config: { columns: 2, fields: [
+        { key: 'housingType', label: 'Vivienda', type: 'radio', options: ['Propia', 'Alquilada', 'Prestada'] },
+        { key: 'accessibility', label: 'Accesibilidad', type: 'radio', options: ['Adecuada', 'Limitada', 'Inadecuada'] },
+        { key: 'conditions', label: 'Condiciones', type: 'textarea' },
+      ] } }] },
+      { key: 'caregiver', title: 'Cuidador y sobrecarga', components: [{ type: 'CaregiverStatus', key: 'caregiver', config: { assessBurden: true } }] },
+      { key: 'resources', title: 'Recursos gestionados', components: [{ type: 'RecommendationsList', key: 'resources', config: {} }] },
+      { key: 'plan', title: 'Plan e interconsulta', components: [
+        { type: 'InterconsultRequest', key: 'interconsult', config: { targetRoles: ['MEDICINE', 'PSYCHOLOGY'] } },
+        { type: 'NextAppointmentScheduler', key: 'nextAppointment', config: {} },
+      ] },
+    ],
+  },
+  {
+    key: 'social_work_child',
+    name: 'Trabajo social · Infantil',
+    specialty: Specialty.SOCIAL_WORK,
+    categoryCode: 'PALLIATIVE_CHILD',
+    version: 1,
+    sections: [
+      { key: 'family', title: 'Situación familiar y escolar', components: [{ type: 'FieldsGroup', key: 'familyGroup', config: { columns: 1, fields: [
+        { key: 'familyComposition', label: 'Composición familiar', type: 'textarea' },
+        { key: 'caregivers', label: 'Cuidadores', type: 'text' },
+        { key: 'schooling', label: 'Escolaridad', type: 'radio', options: ['Asiste', 'No asiste', 'Aula hospitalaria'] },
+      ] } }] },
+      { key: 'housing', title: 'Vivienda y entorno', components: [{ type: 'FieldsGroup', key: 'housingGroup', config: { columns: 2, fields: [
+        { key: 'housingType', label: 'Vivienda', type: 'radio', options: ['Propia', 'Alquilada', 'Prestada'] },
+        { key: 'conditions', label: 'Condiciones', type: 'textarea' },
+      ] } }] },
+      { key: 'support', title: 'Cuidador y red de apoyo', components: [{ type: 'CaregiverStatus', key: 'caregiver', config: { assessBurden: true } }] },
+      { key: 'protection', title: 'Protección y derechos', components: [{ type: 'FieldsGroup', key: 'protectionGroup', config: { columns: 1, fields: [
+        { key: 'protectionRisk', label: 'Riesgo de vulneración', type: 'radio', options: ['Ninguno', 'Sospecha', 'Confirmado'] },
+        { key: 'notes', label: 'Observaciones', type: 'textarea' },
+      ] } }] },
+      { key: 'resources', title: 'Recursos gestionados', components: [{ type: 'RecommendationsList', key: 'resources', config: {} }] },
+      { key: 'plan', title: 'Plan e interconsulta', components: [
+        { type: 'InterconsultRequest', key: 'interconsult', config: { targetRoles: ['MEDICINE', 'PSYCHOLOGY'] } },
+        { type: 'NextAppointmentScheduler', key: 'nextAppointment', config: {} },
+      ] },
+    ],
+  },
+
+  // ---- Psicología ----
+  {
+    key: 'psychology_adult',
+    name: 'Psicología · Adulto',
+    specialty: Specialty.PSYCHOLOGY,
+    categoryCode: null,
+    version: 1,
+    sections: [
+      { key: 'emotional', title: 'Estado emocional y mental', components: [{ type: 'FieldsGroup', key: 'emotionalGroup', config: { columns: 1, fields: [
+        { key: 'emotionalState', label: 'Estado emocional', type: 'textarea' },
+        { key: 'mentalStatus', label: 'Examen mental', type: 'textarea' },
+      ] } }] },
+      { key: 'risk', title: 'Evaluación de riesgo', components: [{ type: 'FieldsGroup', key: 'riskGroup', config: { columns: 1, fields: [
+        { key: 'suicideRisk', label: 'Riesgo suicida', type: 'radio', options: ['Ninguno', 'Bajo', 'Moderado', 'Alto'] },
+        { key: 'anticipatoryGrief', label: 'Duelo anticipado', type: 'switch' },
+        { key: 'notes', label: 'Observaciones', type: 'textarea' },
+      ] } }] },
+      { key: 'scales', title: 'Escalas', components: [{ type: 'ScaleApplication', key: 'scales', config: { scales: ['POS'] } }] },
+      { key: 'intervention', title: 'Intervención', components: [{ type: 'FieldsGroup', key: 'interventionGroup', config: { columns: 1, fields: [
+        { key: 'interventions', label: 'Intervenciones realizadas', type: 'textarea' },
+      ] } }] },
+      { key: 'caregiver', title: 'Cuidador', components: [{ type: 'CaregiverStatus', key: 'caregiver', config: { assessBurden: true } }] },
+      { key: 'plan', title: 'Plan y próxima visita', components: [
+        { type: 'RecommendationsList', key: 'recommendations', config: {} },
+        { type: 'NextAppointmentScheduler', key: 'nextAppointment', config: {} },
+      ] },
+    ],
+  },
+  {
+    key: 'psychology_child',
+    name: 'Psicología · Infantil',
+    specialty: Specialty.PSYCHOLOGY,
+    categoryCode: 'PALLIATIVE_CHILD',
+    version: 1,
+    sections: [
+      { key: 'emotional', title: 'Estado emocional y conductual', components: [{ type: 'FieldsGroup', key: 'emotionalGroup', config: { columns: 1, fields: [
+        { key: 'emotionalState', label: 'Estado emocional', type: 'textarea' },
+        { key: 'behavior', label: 'Conducta', type: 'textarea' },
+      ] } }] },
+      { key: 'development', title: 'Desarrollo y adaptación', components: [{ type: 'FieldsGroup', key: 'devGroup', config: { columns: 2, fields: [
+        { key: 'developmentStage', label: 'Etapa del desarrollo', type: 'text' },
+        { key: 'adaptation', label: 'Adaptación a la enfermedad', type: 'radio', options: ['Buena', 'Regular', 'Difícil'] },
+      ] } }] },
+      { key: 'scales', title: 'Escalas', components: [{ type: 'ScaleApplication', key: 'scales', config: { scales: ['PEDSQL'] } }] },
+      { key: 'family', title: 'Familia y cuidador', components: [{ type: 'CaregiverStatus', key: 'caregiver', config: { assessBurden: true } }] },
+      { key: 'intervention', title: 'Intervención', components: [{ type: 'FieldsGroup', key: 'interventionGroup', config: { columns: 1, fields: [
+        { key: 'interventions', label: 'Intervenciones realizadas', type: 'textarea' },
+      ] } }] },
+      { key: 'plan', title: 'Plan y próxima visita', components: [
+        { type: 'RecommendationsList', key: 'recommendations', config: {} },
+        { type: 'NextAppointmentScheduler', key: 'nextAppointment', config: {} },
+      ] },
+    ],
+  },
+
+  // ---- Fisiatría / Terapia física ----
+  {
+    key: 'physiotherapy_adult',
+    name: 'Fisiatría · Adulto',
+    specialty: Specialty.PHYSIOTHERAPY,
+    categoryCode: null,
+    version: 1,
+    sections: [
+      { key: 'functional', title: 'Valoración funcional', components: [{ type: 'FunctionalStatus', key: 'functional', config: { mode: 'scale', scaleCode: 'BARTHEL' } }] },
+      { key: 'pain', title: 'Dolor y síntomas', components: [
+        { type: 'ScaleApplication', key: 'pain', config: { scales: ['WONG_BAKER'] } },
+        { type: 'SymptomChecklist', key: 'symptoms', config: { symptoms: ['dolor'], scale: '0-10' } },
+      ] },
+      { key: 'exam', title: 'Exploración física', components: [{ type: 'FieldsGroup', key: 'examGroup', config: { columns: 1, fields: [
+        { key: 'rangeOfMotion', label: 'Rango articular', type: 'textarea' },
+        { key: 'muscleStrength', label: 'Fuerza muscular', type: 'radio', options: ['Normal', 'Disminuida', 'Severamente disminuida'] },
+        { key: 'balance', label: 'Equilibrio', type: 'radio', options: ['Bueno', 'Regular', 'Malo'] },
+      ] } }] },
+      { key: 'plan', title: 'Plan de ejercicios', components: [
+        { type: 'FieldsGroup', key: 'exerciseGroup', config: { columns: 1, fields: [{ key: 'exercises', label: 'Ejercicios prescritos', type: 'textarea' }] } },
+        { type: 'RecommendationsList', key: 'recommendations', config: {} },
+      ] },
+      { key: 'goals', title: 'Objetivos y progreso', components: [{ type: 'FieldsGroup', key: 'goalsGroup', config: { columns: 1, fields: [
+        { key: 'goals', label: 'Objetivos', type: 'textarea' },
+        { key: 'progress', label: 'Progreso', type: 'radio', options: ['Mejora', 'Estable', 'Deterioro'] },
+      ] } }] },
+      { key: 'followup', title: 'Próxima visita', components: [{ type: 'NextAppointmentScheduler', key: 'nextAppointment', config: {} }] },
+    ],
+  },
+  {
+    key: 'physiotherapy_child',
+    name: 'Fisiatría · Infantil',
+    specialty: Specialty.PHYSIOTHERAPY,
+    categoryCode: 'PALLIATIVE_CHILD',
+    version: 1,
+    sections: [
+      { key: 'functional', title: 'Valoración funcional', components: [{ type: 'FunctionalStatus', key: 'functional', config: { mode: 'scale', scaleCode: 'LANSKY' } }] },
+      { key: 'pain', title: 'Dolor', components: [{ type: 'ScaleApplication', key: 'pain', config: { scales: ['FLACC'] } }] },
+      { key: 'exam', title: 'Exploración', components: [{ type: 'FieldsGroup', key: 'examGroup', config: { columns: 1, fields: [
+        { key: 'motorDevelopment', label: 'Desarrollo motor', type: 'textarea' },
+        { key: 'tone', label: 'Tono muscular', type: 'radio', options: ['Normal', 'Hipotonía', 'Hipertonía'] },
+        { key: 'posture', label: 'Postura', type: 'textarea' },
+      ] } }] },
+      { key: 'plan', title: 'Plan de ejercicios', components: [
+        { type: 'FieldsGroup', key: 'exerciseGroup', config: { columns: 1, fields: [{ key: 'exercises', label: 'Ejercicios prescritos', type: 'textarea' }] } },
+        { type: 'RecommendationsList', key: 'recommendations', config: {} },
+      ] },
+      { key: 'goals', title: 'Objetivos y progreso', components: [{ type: 'FieldsGroup', key: 'goalsGroup', config: { columns: 1, fields: [
+        { key: 'goals', label: 'Objetivos', type: 'textarea' },
+        { key: 'progress', label: 'Progreso', type: 'radio', options: ['Mejora', 'Estable', 'Deterioro'] },
+      ] } }] },
+      { key: 'caregiver', title: 'Cuidador y próxima visita', components: [
+        { type: 'CaregiverStatus', key: 'caregiver', config: {} },
+        { type: 'NextAppointmentScheduler', key: 'nextAppointment', config: {} },
+      ] },
+    ],
+  },
+
+  // ---- Seguimiento de duelo ----
+  {
+    key: 'bereavement_followup',
+    name: 'Seguimiento de duelo',
+    specialty: null,
+    categoryCode: null,
+    version: 1,
+    sections: [
+      { key: 'mourner', title: 'Identificación del doliente', components: [{ type: 'FieldsGroup', key: 'mournerGroup', config: { columns: 2, fields: [
+        { key: 'relationship', label: 'Relación con el fallecido', type: 'text' },
+        { key: 'deceasedDate', label: 'Fecha de deceso', type: 'date' },
+        { key: 'contactMode', label: 'Modalidad de contacto', type: 'radio', options: ['Presencial', 'Telefónica', 'Domiciliaria'] },
+      ] } }] },
+      { key: 'grief', title: 'Estado del duelo', components: [{ type: 'FieldsGroup', key: 'griefGroup', config: { columns: 1, fields: [
+        { key: 'phase', label: 'Fase del duelo', type: 'radio', options: ['Negación', 'Ira', 'Negociación', 'Depresión', 'Aceptación'] },
+        { key: 'manifestations', label: 'Manifestaciones', type: 'textarea' },
+      ] } }] },
+      { key: 'risk', title: 'Riesgo de duelo complicado', components: [{ type: 'FieldsGroup', key: 'riskGroup', config: { columns: 1, fields: [
+        { key: 'complicatedGriefRisk', label: 'Riesgo', type: 'radio', options: ['Bajo', 'Moderado', 'Alto'] },
+        { key: 'riskFactors', label: 'Factores de riesgo', type: 'chips', options: ['Pérdida súbita', 'Dependencia económica', 'Aislamiento', 'Antecedente psiquiátrico', 'Duelo previo no resuelto'] },
+      ] } }] },
+      { key: 'intervention', title: 'Intervención y derivación', components: [
+        { type: 'RecommendationsList', key: 'recommendations', config: {} },
+        { type: 'InterconsultRequest', key: 'interconsult', config: { targetRoles: ['PSYCHOLOGY', 'SOCIAL_WORK'] } },
+      ] },
+      { key: 'plan', title: 'Plan de seguimiento', components: [{ type: 'NextAppointmentScheduler', key: 'nextAppointment', config: {} }] },
+    ],
+  },
 ]
 
 // ============================================================================
