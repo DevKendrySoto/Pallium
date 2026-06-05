@@ -74,6 +74,12 @@ enum VisitModality {
   TELEHEALTH // Teleconsulta
 }
 
+/// Prioridad de la visita. HIGH la usa el reagendado automático por "fuera de tiempo".
+enum VisitPriority {
+  NORMAL
+  HIGH
+}
+
 /// Resultado del cierre de una visita (precisa el motivo más allá del status).
 enum VisitOutcome {
   COMPLETED // realizada
@@ -481,6 +487,7 @@ model Visit {
 
   modality VisitModality @default(HOME)
   status   VisitStatus   @default(SCHEDULED)
+  priority VisitPriority @default(NORMAL)
 
   // Agenda
   scheduledDate DateTime @map("scheduled_date")

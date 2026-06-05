@@ -19,6 +19,17 @@ export class CloseVisitDto {
   @IsOptional() @IsString() reason?: string
 }
 
+/**
+ * Resultado de la visita desde la bandeja de la enfermera.
+ * Outcomes: COMPLETED, PATIENT_NOT_HOME (paciente fuera de casa),
+ * OUT_OF_TIME (fuera de tiempo), REFUSED (rehúso de atención).
+ */
+export class RecordOutcomeDto {
+  @IsEnum(VisitOutcome) outcome!: VisitOutcome
+  @IsOptional() @IsString() reason?: string
+  @IsOptional() @IsObject() metadata?: Record<string, unknown>
+}
+
 export class SaveClinicalRecordDto {
   @IsEnum(Specialty) specialty!: Specialty
   @IsOptional() @IsString() templateKey?: string
