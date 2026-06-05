@@ -371,6 +371,10 @@ model Patient {
   timeline         TimelineEvent[]
   statusHistory    PatientStatusHistory[]
   documents        Document[]
+  allergies        Allergy[]
+  medicalHistory   MedicalHistory[]
+  habits           Habit[]
+  advanceDirective AdvanceDirective?
 
   @@unique([identificationType, identificationNo])
   @@index([status])
@@ -953,4 +957,121 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ============================================================================
+//  PERFIL CLÍNICO PERSISTENTE — Fase 1
+//  (Alergias, antecedentes, hábitos tóxicos, voluntades anticipadas)
+//  Provenance: recordedById se guarda como escalar (sin relación a User) para
+//  mantener estos modelos de perfil desacoplados; el "quién" también queda en
+//  el timeline/auditoría.
+// ============================================================================
+
+enum AllergyType {
+  MEDICATION
+  FOOD
+  ENVIRONMENTAL
+  OTHER
+}
+
+enum AllergySeverity {
+  MILD
+  MODERATE
+  SEVERE
+}
+
+model Allergy {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  substance String
+  type      AllergyType     @default(OTHER)
+  reaction  String?
+  severity  AllergySeverity @default(MODERATE)
+  isActive  Boolean         @default(true) @map("is_active")
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("allergies")
+}
+
+enum HistoryCategory {
+  PERSONAL
+  SURGICAL
+  FAMILY
+  OBSTETRIC
+}
+
+model MedicalHistory {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  category    HistoryCategory @default(PERSONAL)
+  description String
+  year        Int?
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([patientId])
+  @@map("medical_history")
+}
+
+enum HabitType {
+  TOBACCO
+  ALCOHOL
+  DRUGS
+  OTHER
+}
+
+enum HabitStatus {
+  NEVER
+  ACTIVE
+  FORMER
+}
+
+model Habit {
+  id        String  @id @default(cuid())
+  patientId String  @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  type     HabitType
+  status   HabitStatus @default(NEVER)
+  detail   String?
+  quantity String?
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Un registro por tipo de hábito por paciente.
+  @@unique([patientId, type])
+  @@map("habits")
+}
+
+/// Voluntades anticipadas (1:1 con el paciente). Inmutables una vez firmadas (regla en servicio).
+model AdvanceDirective {
+  id        String  @id @default(cuid())
+  patientId String  @unique @map("patient_id")
+  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  dnr                    Boolean   @default(false)
+  preferredPlaceOfCare   String?   @map("preferred_place_of_care")
+  lifeSupportPreferences String?   @map("life_support_preferences")
+  proxyName              String?   @map("proxy_name")
+  proxyPhone             String?   @map("proxy_phone")
+  documentKey            String?   @map("document_key")
+  signedAt               DateTime? @map("signed_at")
+
+  recordedById String?  @map("recorded_by_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("advance_directives")
 }

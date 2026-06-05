@@ -36,6 +36,11 @@ const PERMISSIONS: Record<string, string> = {
   'driver:read': 'Ver choferes',
   'driver:manage': 'Gestionar choferes',
 
+  // Perfil clínico persistente
+  'allergy:write': 'Registrar/editar alergias',
+  'history:write': 'Registrar/editar antecedentes y hábitos',
+  'directive:write': 'Registrar/firmar voluntades anticipadas',
+
   // Registro clínico
   'clinical:read': 'Ver registros clínicos',
   'note:medical:write': 'Escribir nota médica',
@@ -126,6 +131,7 @@ const ROLES: RoleSeed[] = [
       'clinical:read', 'note:medical:write', 'vitals:write',
       'diagnosis:read', 'diagnosis:write',
       'medication:read', 'medication:write',
+      'allergy:write', 'history:write', 'directive:write',
       'scale:read', 'scale:assess',
       'alert:read', 'alert:manage',
       'timeline:read', 'document:read', 'document:upload',
@@ -140,6 +146,7 @@ const ROLES: RoleSeed[] = [
       'visit:read', 'visit:complete',
       'clinical:read', 'note:nursing:write', 'vitals:write',
       'medication:read',
+      'allergy:write', 'history:write',
       'scale:read', 'scale:assess',
       'alert:read', 'alert:manage',
       'timeline:read', 'document:read', 'document:upload',

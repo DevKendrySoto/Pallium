@@ -15,6 +15,7 @@ import { DriversModule } from './drivers/drivers.module'
 import { HealthController } from './health/health.controller'
 import { PatientsModule } from './patients/patients.module'
 import { PrismaModule } from './prisma/prisma.module'
+import { ProfileModule } from './profile/profile.module'
 import { RoutesModule } from './routes/routes.module'
 import { ScalesModule } from './scales/scales.module'
 import { UsersModule } from './users/users.module'
@@ -41,6 +42,7 @@ import { VisitsModule } from './visits/visits.module'
     ClinicalTemplatesModule,
     ScalesModule,
     CategoriesModule,
+    ProfileModule,
   ],
   controllers: [HealthController],
   providers: [
