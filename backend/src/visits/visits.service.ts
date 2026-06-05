@@ -4,12 +4,17 @@ import {
   NotFoundException,
 } from '@nestjs/common'
 import {
+  type Prisma,
+  AlertSeverity,
+  AlertType,
   PatientStatus,
   TimelineEventType,
   VisitModality,
+  VisitOutcome,
   VisitStatus,
   VisitType,
 } from '@prisma/client'
+import { AlertsService } from '../alerts/alerts.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { canTransitionVisit, isTerminalVisitStatus } from './domain/visit-status'
 import type { AssignProfessionalsDto } from './dto/assign-professionals.dto'
@@ -20,6 +25,12 @@ import type {
   RescheduleVisitDto,
   TransitionVisitDto,
 } from './dto/visit-actions.dto'
+import type {
+  CheckInDto,
+  CloseVisitDto,
+  SaveClinicalRecordDto,
+  SignatureDto,
+} from './dto/visit-flow.dto'
 import { VisitsRepository } from './visits.repository'
 
 /** Estados que solo se alcanzan por endpoints dedicados (no por transición genérica). */
@@ -34,6 +45,7 @@ export class VisitsService {
   constructor(
     private readonly repo: VisitsRepository,
     private readonly prisma: PrismaService,
+    private readonly alerts: AlertsService,
   ) {}
 
   private async getOrThrow(id: string) {
@@ -163,5 +175,136 @@ export class VisitsService {
     const visit = await this.getOrThrow(id)
     this.assertTransition(visit.status, VisitStatus.RESCHEDULED)
     return this.repo.reschedule({ visit, newDate: new Date(dto.scheduledDate), reason: dto.reason })
+  }
+
+  // ===== Flujo de visita (Entregable 6) =====
+
+  /** Check-in: inicia la visita y captura geolocalización (si se otorga). */
+  async checkIn(id: string, dto: CheckInDto) {
+    const visit = await this.getOrThrow(id)
+    this.assertTransition(visit.status, VisitStatus.IN_PROGRESS)
+    return this.repo.transition({
+      visitId: id,
+      to: VisitStatus.IN_PROGRESS,
+      patientId: visit.patientId,
+      extra: {
+        checkInAt: new Date(),
+        checkInLat: dto.latitude ?? null,
+        checkInLng: dto.longitude ?? null,
+      },
+    })
+  }
+
+  /** Cierre de la visita con resultado y sus acciones automáticas. */
+  async close(id: string, dto: CloseVisitDto) {
+    const visit = await this.getOrThrow(id)
+
+    if (dto.outcome === VisitOutcome.COMPLETED) {
+      this.assertTransition(visit.status, VisitStatus.COMPLETED)
+      return this.repo.completeVisit({
+        visitId: id,
+        patientId: visit.patientId,
+        type: visit.type,
+        completedAt: new Date(),
+      })
+    }
+
+    // No realizada: NO_SHOW + outcome + acciones.
+    this.assertTransition(visit.status, VisitStatus.NO_SHOW)
+    const refused = dto.outcome === VisitOutcome.REFUSED
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const v = await tx.visit.update({
+        where: { id },
+        data: { status: VisitStatus.NO_SHOW, outcome: dto.outcome, cancelReason: dto.reason },
+      })
+      await tx.timelineEvent.create({
+        data: {
+          patientId: visit.patientId,
+          type: TimelineEventType.STATUS_CHANGE,
+          title: `Visita no realizada (${dto.outcome})`,
+          description: dto.reason,
+          occurredAt: new Date(),
+          sourceType: 'visit',
+          sourceId: id,
+        },
+      })
+      if (refused) {
+        await tx.patient.update({
+          where: { id: visit.patientId },
+          data: { refusalCount: { increment: 1 } },
+        })
+      }
+      return v
+    })
+
+    // Alerta a Agenda con la acción correspondiente.
+    await this.alerts.raise({
+      patientId: visit.patientId,
+      type: AlertType.ADMINISTRATIVE,
+      severity: refused ? AlertSeverity.HIGH : AlertSeverity.MEDIUM,
+      title: refused ? 'Rehúso de atención' : 'Visita no realizada',
+      message: refused
+        ? `El paciente rehusó la atención${dto.reason ? `: ${dto.reason}` : ''}`
+        : `Visita no realizada (${dto.outcome}). Reprogramar.`,
+      sourceType: 'visit',
+      sourceId: id,
+    })
+
+    return this.repo.findById(updated.id)
+  }
+
+  /** Crea o actualiza el registro clínico dinámico de la visita (borrador/cierre). */
+  async saveClinicalRecord(id: string, dto: SaveClinicalRecordDto, authorId: string) {
+    const visit = await this.getOrThrow(id)
+    const existing = await this.prisma.clinicalRecord.findFirst({
+      where: { visitId: id, authorId, specialty: dto.specialty, deletedAt: null },
+      select: { id: true },
+    })
+    const data = dto.data as Prisma.InputJsonValue
+
+    if (existing) {
+      return this.prisma.clinicalRecord.update({
+        where: { id: existing.id },
+        data: { templateKey: dto.templateKey, summary: dto.summary, data },
+      })
+    }
+
+    const record = await this.prisma.clinicalRecord.create({
+      data: {
+        patient: { connect: { id: visit.patientId } },
+        visit: { connect: { id } },
+        specialty: dto.specialty,
+        author: { connect: { id: authorId } },
+        templateKey: dto.templateKey,
+        summary: dto.summary,
+        data,
+      },
+    })
+    await this.prisma.timelineEvent.create({
+      data: {
+        patientId: visit.patientId,
+        type: TimelineEventType.CLINICAL_NOTE,
+        title: `Nota clínica — ${dto.specialty}`,
+        occurredAt: new Date(),
+        actorId: authorId,
+        sourceType: 'clinical_record',
+        sourceId: record.id,
+      },
+    })
+    return record
+  }
+
+  /** Firma del cuidador; sella la visita. */
+  async signCaregiver(id: string, dto: SignatureDto) {
+    await this.getOrThrow(id)
+    return this.prisma.visit.update({
+      where: { id },
+      data: {
+        caregiverSignatureKey: dto.storageKey,
+        signerName: dto.signerName,
+        signedAt: new Date(),
+      },
+    })
   }
 }

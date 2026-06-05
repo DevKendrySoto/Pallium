@@ -4,6 +4,7 @@ import {
   AlertStatus,
   AlertType,
   TimelineEventType,
+  VisitOutcome,
   VisitStatus,
   VisitType,
 } from '@prisma/client'
@@ -105,7 +106,7 @@ export class VisitsRepository {
     return this.prisma.$transaction(async (tx) => {
       const visit = await tx.visit.update({
         where: { id: visitId },
-        data: { status: VisitStatus.COMPLETED, completedAt },
+        data: { status: VisitStatus.COMPLETED, completedAt, outcome: VisitOutcome.COMPLETED },
         include: visitInclude,
       })
 
