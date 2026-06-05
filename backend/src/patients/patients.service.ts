@@ -4,7 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common'
-import { PatientStatus, Prisma, TimelineEventType } from '@prisma/client'
+import { AlertSeverity, AlertType, PatientStatus, Prisma, TimelineEventType } from '@prisma/client'
+import { AlertsService } from '../alerts/alerts.service'
 import { computeNextRegularDue } from '../visits/domain/cadence'
 import { canTransition } from './domain/patient-status'
 import type { ChangeStatusDto } from './dto/change-status.dto'
@@ -14,7 +15,10 @@ import { PatientsRepository } from './patients.repository'
 
 @Injectable()
 export class PatientsService {
-  constructor(private readonly repo: PatientsRepository) {}
+  constructor(
+    private readonly repo: PatientsRepository,
+    private readonly alerts: AlertsService,
+  ) {}
 
   /** Genera un MRN legible: PAL-AÑO-#### (secuencial dentro del año). */
   private async generateMrn(): Promise<string> {
@@ -25,6 +29,7 @@ export class PatientsService {
 
   async create(dto: CreatePatientDto) {
     const mrn = await this.generateMrn()
+    const now = new Date()
     try {
       const patient = await this.repo.create({
         mrn,
@@ -36,13 +41,17 @@ export class PatientsService {
         sex: dto.sex,
         phone: dto.phone,
         email: dto.email,
-        status: PatientStatus.PENDING_APPROVAL,
+        // El paciente ingresa directamente como Activo (sin paso de aprobación).
+        status: PatientStatus.ACTIVE,
+        admittedAt: now,
+        // Arranca el reloj de cadencia: primera visita regular a los 30 días.
+        nextRegularVisitDue: computeNextRegularDue(now),
         category: { connect: { id: dto.categoryId } },
         timeline: {
           create: {
             type: TimelineEventType.REGISTRATION,
             title: 'Paciente registrado',
-            occurredAt: new Date(),
+            occurredAt: now,
             sourceType: 'patient',
           },
         },
@@ -76,30 +85,11 @@ export class PatientsService {
     return this.repo.listTimeline(id)
   }
 
-  /** Aprobación de admisión: PENDING_APPROVAL → ACTIVE, sella aprobador y fecha. */
-  async approve(id: string, actorId: string) {
-    const patient = await this.getById(id)
-    if (patient.status !== PatientStatus.PENDING_APPROVAL) {
-      throw new BadRequestException('El paciente no está pendiente de aprobación')
-    }
-    const now = new Date()
-    return this.repo.changeStatus({
-      patientId: id,
-      from: patient.status,
-      to: PatientStatus.ACTIVE,
-      reason: 'Admisión aprobada',
-      actorId,
-      patientUpdate: {
-        approvedBy: { connect: { id: actorId } },
-        approvedAt: now,
-        admittedAt: now,
-        // Arranca el reloj de cadencia: primera visita regular a los 30 días.
-        nextRegularVisitDue: computeNextRegularDue(now),
-      },
-    })
-  }
-
-  /** Cambio de estado general, validado contra la máquina de estados. */
+  /**
+   * Cambio de estado general, validado contra la máquina de estados.
+   * Solo ADMIN y COORDINADOR_MEDICO (permiso patient:change-status) llegan aquí.
+   * Para DECESO exige fecha, lugar y motivo, y levanta una notificación.
+   */
   async changeStatus(id: string, dto: ChangeStatusDto, actorId: string) {
     const patient = await this.getById(id)
     if (patient.status === dto.status) {
@@ -110,10 +100,22 @@ export class PatientsService {
         `Transición no permitida: ${patient.status} → ${dto.status}`,
       )
     }
-    const patientUpdate =
-      dto.status === PatientStatus.DECEASED ? { deceasedAt: new Date() } : undefined
 
-    return this.repo.changeStatus({
+    let patientUpdate: Prisma.PatientUpdateInput | undefined
+    if (dto.status === PatientStatus.DECEASED) {
+      if (!dto.deathDate || !dto.deathPlace || !dto.reason?.trim()) {
+        throw new BadRequestException(
+          'Para registrar el deceso se requieren fecha, lugar y motivo',
+        )
+      }
+      patientUpdate = {
+        deceasedAt: new Date(),
+        deathDate: new Date(dto.deathDate),
+        deathPlace: dto.deathPlace,
+      }
+    }
+
+    const updated = await this.repo.changeStatus({
       patientId: id,
       from: patient.status,
       to: dto.status,
@@ -121,5 +123,22 @@ export class PatientsService {
       actorId,
       patientUpdate,
     })
+
+    if (dto.status === PatientStatus.DECEASED) {
+      // Notifica el deceso (alerta administrativa crítica). El surface de alertas
+      // es visible para ADMIN y COORDINADOR_MEDICO (ambos con alert:read).
+      await this.alerts.raise({
+        patientId: id,
+        type: AlertType.ADMINISTRATIVE,
+        severity: AlertSeverity.CRITICAL,
+        title: 'Paciente fallecido',
+        message: `${patient.firstName} ${patient.lastName} (${patient.mrn}). Motivo: ${dto.reason}. Lugar: ${dto.deathPlace}.`,
+        sourceType: 'patient',
+        sourceId: id,
+        dedup: true,
+      })
+    }
+
+    return updated
   }
 }

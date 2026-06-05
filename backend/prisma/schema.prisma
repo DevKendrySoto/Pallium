@@ -23,9 +23,8 @@ datasource db {
 // ============================================================================
 
 /// Estado del paciente — máquina de estados cerrada.
-/// PENDING_APPROVAL → ACTIVE → (PASSIVE ⇄ ACTIVE) → DECEASED
+/// ACTIVE → (PASSIVE ⇄ ACTIVE) → DECEASED. El paciente se crea Activo directamente.
 enum PatientStatus {
-  PENDING_APPROVAL // Pendiente Aprobación
   ACTIVE // Activo
   PASSIVE // Pasivo
   DECEASED // Deceso
@@ -240,6 +239,8 @@ model User {
   timelineEvents     TimelineEvent[]
   auditLogs          AuditLog[]
   dispatchedRoutes   Route[]                @relation("RouteDispatcher")
+  medicalRoutes      Route[]                @relation("RouteMedical")
+  nursingRoutes      Route[]                @relation("RouteNursing")
 
   @@index([specialty])
   @@map("users")
@@ -351,14 +352,19 @@ model Patient {
   // Clasificación y estado
   categoryId String          @map("category_id")
   category   PatientCategory @relation(fields: [categoryId], references: [id])
-  status     PatientStatus   @default(PENDING_APPROVAL)
+  status     PatientStatus   @default(ACTIVE)
 
-  // Admisión / aprobación
+  // Admisión. (approvedBy/approvedAt: deprecados tras eliminar el flujo de aprobación;
+  // se conservan para no perder datos históricos de admisiones aprobadas.)
   approvedById String?   @map("approved_by_id")
   approvedBy   User?     @relation("PatientApprover", fields: [approvedById], references: [id])
   approvedAt   DateTime? @map("approved_at")
   admittedAt   DateTime? @map("admitted_at")
-  deceasedAt   DateTime? @map("deceased_at")
+
+  // Deceso
+  deceasedAt DateTime? @map("deceased_at")
+  deathDate  DateTime? @map("death_date")
+  deathPlace String?   @map("death_place")
 
   // Cadencia: próxima visita regular calculada (cada 30 días desde la última).
   lastRegularVisitAt  DateTime? @map("last_regular_visit_at")
@@ -562,6 +568,13 @@ model Route {
 
   driverId String? @map("driver_id")
   driver   Driver? @relation(fields: [driverId], references: [id])
+
+  // Equipo clínico asignado a la ruta. Solo ADMIN y COORDINADOR_MEDICO
+  // pueden setear/cambiar estos campos (permiso route:assign-clinical-team).
+  assignedMedicalId String? @map("assigned_medical_id")
+  assignedMedical   User?   @relation("RouteMedical", fields: [assignedMedicalId], references: [id])
+  assignedNursingId String? @map("assigned_nursing_id")
+  assignedNursing   User?   @relation("RouteNursing", fields: [assignedNursingId], references: [id])
 
   notes String?
 
