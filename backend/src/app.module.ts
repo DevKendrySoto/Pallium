@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module'
 import { CadenceModule } from './cadence/cadence.module'
 import { CategoriesModule } from './categories/categories.module'
 import { ClinicalModule } from './clinical/clinical.module'
+import { ClinicalTemplatesModule } from './clinical-templates/clinical-templates.module'
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard'
 import { PermissionsGuard } from './common/guards/permissions.guard'
 import { configuration } from './config/configuration'
@@ -37,6 +38,7 @@ import { VisitsModule } from './visits/visits.module'
     DriversModule,
     RoutesModule,
     ClinicalModule,
+    ClinicalTemplatesModule,
     ScalesModule,
     CategoriesModule,
   ],
