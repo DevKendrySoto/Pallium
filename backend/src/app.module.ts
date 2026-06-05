@@ -13,6 +13,7 @@ import { PermissionsGuard } from './common/guards/permissions.guard'
 import { ReadOnlyGuard } from './common/guards/read-only.guard'
 import { configuration } from './config/configuration'
 import { validateEnv } from './config/env.validation'
+import { DocumentsModule } from './documents/documents.module'
 import { DriversModule } from './drivers/drivers.module'
 import { HealthController } from './health/health.controller'
 import { PatientsModule } from './patients/patients.module'
@@ -39,6 +40,7 @@ import { VisitsModule } from './visits/visits.module'
     AlertsModule,
     CadenceModule,
     DriversModule,
+    DocumentsModule,
     RoutesModule,
     ClinicalModule,
     ClinicalTemplatesModule,
