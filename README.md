@@ -37,6 +37,26 @@ npm run start:dev
 
 API en `http://localhost:3000/api` · health en `/api/health`.
 
+## Usuarios de prueba (seed)
+
+El seed crea un administrador y un usuario por cada rol del sistema.
+
+| Rol | Correo | Contraseña |
+| --- | --- | --- |
+| Administrador | `admin@pallium.local` | `Admin12345` |
+| Coordinador médico | `coordinador@pallium.local` | `Pallium123` |
+| Médico | `medico@pallium.local` | `Pallium123` |
+| Enfermería | `enfermeria@pallium.local` | `Pallium123` |
+| Psicología | `psicologia@pallium.local` | `Pallium123` |
+| Trabajo Social | `trabajosocial@pallium.local` | `Pallium123` |
+| Fisiatra | `fisiatra@pallium.local` | `Pallium123` |
+| Agenda | `agenda@pallium.local` | `Pallium123` |
+| Auditor | `auditor@pallium.local` | `Pallium123` |
+
+> Las claves se pueden sobrescribir con `ADMIN_EMAIL`, `ADMIN_PASSWORD` y
+> `STAFF_PASSWORD`. El **Coordinador médico** crea pacientes, cambia su estado
+> clínico y asigna el equipo clínico (médico/enfermera) a las rutas.
+
 ## Flujo de ramas
 
 `feature|bugfix|refactor|chore|docs/* → develop → main`. Los `hotfix/*` parten

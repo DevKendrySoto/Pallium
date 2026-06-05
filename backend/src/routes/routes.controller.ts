@@ -14,6 +14,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { RequirePermissions } from '../common/decorators/permissions.decorator'
 import {
   AddStopsDto,
+  AssignClinicalTeamDto,
   AssignDriverDto,
   BuildFromVisitsDto,
   ChangeRouteStatusDto,
@@ -31,6 +32,13 @@ export class RoutesController {
   @RequirePermissions('route:read')
   list(@Query() query: ListRoutesDto) {
     return this.routes.list(query)
+  }
+
+  // Personal clínico asignable. Declarado antes de :id para no ser capturado por él.
+  @Get('clinical-staff')
+  @RequirePermissions('route:assign-clinical-team')
+  clinicalStaff() {
+    return this.routes.getClinicalStaff()
   }
 
   @Get(':id')
@@ -73,6 +81,14 @@ export class RoutesController {
   @RequirePermissions('route:update')
   assignDriver(@Param('id') id: string, @Body() dto: AssignDriverDto) {
     return this.routes.assignDriver(id, dto.driverId)
+  }
+
+  // Asignación de equipo clínico: permiso aparte (ADMIN + COORDINADOR_MEDICO).
+  // Agenda puede crear ruta/chofer/paradas (route:update) pero NO el equipo clínico.
+  @Patch(':id/clinical-team')
+  @RequirePermissions('route:assign-clinical-team')
+  assignClinicalTeam(@Param('id') id: string, @Body() dto: AssignClinicalTeamDto) {
+    return this.routes.assignClinicalTeam(id, dto)
   }
 
   @Patch(':id/status')

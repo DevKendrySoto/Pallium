@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import type { Driver, RouteDetail, RouteListItem, RouteStatus } from './types'
+import type { ClinicalStaff, Driver, RouteDetail, RouteListItem, RouteStatus } from './types'
 
 export const routeKeys = {
   all: ['routes'] as const,
@@ -66,6 +66,24 @@ export function useAssignDriver(routeId: string) {
   return useRouteMutation(
     (driverId: string) => api.patch<RouteDetail>(`/routes/${routeId}/driver`, { driverId }),
     'Chofer asignado',
+  )
+}
+
+/** Personal clínico asignable (solo ADMIN/COORDINADOR_MEDICO pueden consultarlo). */
+export function useClinicalStaff(enabled: boolean) {
+  return useQuery({
+    queryKey: ['routes', 'clinical-staff'],
+    queryFn: () => api.get<ClinicalStaff>('/routes/clinical-staff'),
+    staleTime: 5 * 60 * 1000,
+    enabled,
+  })
+}
+
+export function useAssignClinicalTeam(routeId: string) {
+  return useRouteMutation(
+    (body: { medicalId?: string | null; nursingId?: string | null }) =>
+      api.patch<RouteDetail>(`/routes/${routeId}/clinical-team`, body),
+    'Equipo clínico actualizado',
   )
 }
 

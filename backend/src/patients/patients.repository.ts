@@ -85,10 +85,7 @@ export class PatientsRepository {
       await tx.timelineEvent.create({
         data: {
           patientId,
-          type:
-            to === PatientStatus.ACTIVE && from === PatientStatus.PENDING_APPROVAL
-              ? TimelineEventType.ADMISSION_APPROVED
-              : TimelineEventType.STATUS_CHANGE,
+          type: TimelineEventType.STATUS_CHANGE,
           title: `Estado: ${from} → ${to}`,
           description: reason,
           occurredAt: new Date(),

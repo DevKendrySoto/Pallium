@@ -1,5 +1,5 @@
 import { PatientStatus } from '@prisma/client'
-import { IsEnum, IsOptional, IsString } from 'class-validator'
+import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator'
 
 export class ChangeStatusDto {
   @IsEnum(PatientStatus)
@@ -8,4 +8,13 @@ export class ChangeStatusDto {
   @IsOptional()
   @IsString()
   reason?: string
+
+  // Obligatorios cuando status = DECEASED (validado en el servicio).
+  @IsOptional()
+  @IsDateString()
+  deathDate?: string
+
+  @IsOptional()
+  @IsString()
+  deathPlace?: string
 }

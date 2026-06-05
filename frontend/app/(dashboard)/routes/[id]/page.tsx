@@ -24,15 +24,21 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { DISPATCH_STATUS_LABELS, isEditableRoute } from '@/features/routes/constants'
 import {
+  useAssignClinicalTeam,
   useAssignDriver,
   useChangeRouteStatus,
+  useClinicalStaff,
   useDispatchRoute,
   useDrivers,
   useRemoveStop,
   useReorderStops,
   useRoute,
 } from '@/features/routes/hooks'
+import { useHasPermission } from '@/hooks/use-permission'
 import { useReadOnly } from '@/hooks/use-read-only'
+
+const UNASSIGNED = 'none'
+const NO_TEAM_PERMISSION = 'Solo el coordinador médico puede asignar el equipo clínico.'
 
 function fmtTime(iso: string | null): string {
   return iso ? new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : '--:--'
@@ -44,6 +50,9 @@ export default function RouteDetailPage() {
   const { data: route, isLoading, isError } = useRoute(id)
   const drivers = useDrivers()
   const assignDriver = useAssignDriver(id)
+  const canAssignTeam = useHasPermission('route:assign-clinical-team')
+  const clinicalStaff = useClinicalStaff(canAssignTeam)
+  const assignTeam = useAssignClinicalTeam(id)
   const changeStatus = useChangeRouteStatus(id)
   const removeStop = useRemoveStop(id)
   const reorder = useReorderStops(id)
@@ -152,6 +161,65 @@ export default function RouteDetailPage() {
                   {route.driver ? `${route.driver.fullName} · ${route.driver.phone}` : 'Sin asignar'}
                 </p>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Equipo clínico — solo ADMIN y COORDINADOR_MEDICO pueden cambiarlo */}
+          <Card className="border-slate-200">
+            <CardHeader>
+              <CardTitle className="text-base">Equipo clínico</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1" title={canAssignTeam ? undefined : NO_TEAM_PERMISSION}>
+                <p className="text-xs text-muted-foreground">Médico asignado</p>
+                {canAssignTeam ? (
+                  <Select
+                    value={route.assignedMedical?.id ?? UNASSIGNED}
+                    onValueChange={(v) =>
+                      assignTeam.mutate({ medicalId: v === UNASSIGNED ? null : v })
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={UNASSIGNED}>Sin asignar</SelectItem>
+                      {clinicalStaff.data?.medical.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          {m.fullName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm">{route.assignedMedical?.fullName ?? 'Sin asignar'}</p>
+                )}
+              </div>
+              <div className="space-y-1" title={canAssignTeam ? undefined : NO_TEAM_PERMISSION}>
+                <p className="text-xs text-muted-foreground">Enfermera asignada</p>
+                {canAssignTeam ? (
+                  <Select
+                    value={route.assignedNursing?.id ?? UNASSIGNED}
+                    onValueChange={(v) =>
+                      assignTeam.mutate({ nursingId: v === UNASSIGNED ? null : v })
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={UNASSIGNED}>Sin asignar</SelectItem>
+                      {clinicalStaff.data?.nursing.map((n) => (
+                        <SelectItem key={n.id} value={n.id}>
+                          {n.fullName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm">{route.assignedNursing?.fullName ?? 'Sin asignar'}</p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
