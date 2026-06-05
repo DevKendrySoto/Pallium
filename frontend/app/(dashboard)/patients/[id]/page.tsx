@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
 import { DeathDialog, type DeathDetails } from '@/components/patients/death-dialog'
 import { PatientStatusBadge } from '@/components/patients/patient-status-badge'
@@ -46,6 +46,10 @@ function fmtDate(value: string | null): string {
 
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const tabParam = useSearchParams().get('tab')
+  const initialTab = ['resumen', 'clinico', 'social', 'historial'].includes(tabParam ?? '')
+    ? (tabParam as string)
+    : 'resumen'
   const { data: patient, isLoading, isError } = usePatient(id)
   const changeStatus = useChangePatientStatus()
   const [deathOpen, setDeathOpen] = useState(false)
@@ -118,7 +122,7 @@ export default function PatientDetailPage() {
             </div>
           </div>
 
-          <Tabs defaultValue="resumen">
+          <Tabs defaultValue={initialTab}>
             <TabsList>
               <TabsTrigger value="resumen">Resumen</TabsTrigger>
               <TabsTrigger value="clinico">Clínico</TabsTrigger>

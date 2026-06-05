@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common'
 import {
   type Prisma,
@@ -13,6 +14,7 @@ import {
   TimelineEventType,
   VisitModality,
   VisitOutcome,
+  VisitPriority,
   VisitStatus,
   VisitType,
 } from '@prisma/client'
@@ -31,10 +33,36 @@ import type {
 import type {
   CheckInDto,
   CloseVisitDto,
+  RecordOutcomeDto,
   SaveClinicalRecordDto,
   SignatureDto,
 } from './dto/visit-flow.dto'
 import { VisitsRepository } from './visits.repository'
+
+/** Resultado del registro de outcome (lo consume la bandeja de la enfermera). */
+export interface OutcomeResult {
+  outcome: VisitOutcome
+  visitId: string
+  status: VisitStatus
+  /** Rehúsos acumulados del paciente tras un outcome REFUSED. */
+  refusalCount?: number
+  /** Visita creada automáticamente (reintento mañana / próxima a +30 días). */
+  nextVisitId?: string
+  /** true si se levantó la alerta crítica de considerar estado pasivo. */
+  consideredPassive?: boolean
+}
+
+function startOfDay(d: Date): Date {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+
+function addDays(d: Date, days: number): Date {
+  const x = new Date(d)
+  x.setDate(x.getDate() + days)
+  return x
+}
 
 /** Estados que solo se alcanzan por endpoints dedicados (no por transición genérica). */
 const DEDICATED = new Set<VisitStatus>([
@@ -264,6 +292,167 @@ export class VisitsService {
     })
 
     return this.repo.findById(updated.id)
+  }
+
+  /**
+   * Registra el resultado de una visita desde la bandeja de la enfermera y
+   * dispara las acciones automáticas por outcome (Entregable dashboard enfermera).
+   */
+  async recordOutcome(id: string, dto: RecordOutcomeDto): Promise<OutcomeResult> {
+    const visit = await this.getOrThrow(id)
+
+    // COMPLETED solo es válido si existe un registro clínico de la visita.
+    if (dto.outcome === VisitOutcome.COMPLETED) {
+      const record = await this.prisma.clinicalRecord.findFirst({
+        where: { visitId: id, deletedAt: null },
+        select: { id: true },
+      })
+      if (!record) {
+        throw new UnprocessableEntityException(
+          'No se puede completar la visita sin un registro clínico asociado',
+        )
+      }
+      this.assertTransition(visit.status, VisitStatus.COMPLETED)
+      await this.repo.completeVisit({
+        visitId: id,
+        patientId: visit.patientId,
+        type: visit.type,
+        completedAt: new Date(),
+      })
+      return { outcome: dto.outcome, visitId: id, status: VisitStatus.COMPLETED }
+    }
+
+    // No realizada → NO_SHOW + outcome + acciones automáticas.
+    this.assertTransition(visit.status, VisitStatus.NO_SHOW)
+    const refused = dto.outcome === VisitOutcome.REFUSED
+    const outOfTime = dto.outcome === VisitOutcome.OUT_OF_TIME
+
+    const tx = await this.prisma.$transaction(async (db) => {
+      await db.visit.update({
+        where: { id },
+        data: { status: VisitStatus.NO_SHOW, outcome: dto.outcome, cancelReason: dto.reason },
+      })
+      await db.timelineEvent.create({
+        data: {
+          patientId: visit.patientId,
+          type: TimelineEventType.STATUS_CHANGE,
+          title: `Visita no realizada (${dto.outcome})`,
+          description: dto.reason,
+          occurredAt: new Date(),
+          sourceType: 'visit',
+          sourceId: id,
+        },
+      })
+
+      let refusalCount: number | undefined
+      let nextVisitId: string | undefined
+
+      if (outOfTime) {
+        // Reintento prioritario al día siguiente (sin auto-asignar ruta; la enruta agenda).
+        const next = await db.visit.create({
+          data: this.copyVisitData(visit, addDays(startOfDay(new Date()), 1), VisitPriority.HIGH),
+          select: { id: true },
+        })
+        nextVisitId = next.id
+      }
+
+      if (refused) {
+        const p = await db.patient.update({
+          where: { id: visit.patientId },
+          data: { refusalCount: { increment: 1 } },
+          select: { refusalCount: true },
+        })
+        refusalCount = p.refusalCount
+        // Próxima visita regular a +30 días.
+        const next = await db.visit.create({
+          data: this.copyVisitData(visit, addDays(new Date(), 30), VisitPriority.NORMAL, VisitType.REGULAR),
+          select: { id: true },
+        })
+        nextVisitId = next.id
+      }
+
+      return { refusalCount, nextVisitId }
+    })
+
+    let consideredPassive = false
+
+    if (dto.outcome === VisitOutcome.PATIENT_NOT_HOME) {
+      // Alerta para agenda: confirmar disponibilidad del paciente.
+      await this.alerts.raise({
+        patientId: visit.patientId,
+        type: AlertType.ADMINISTRATIVE,
+        severity: AlertSeverity.MEDIUM,
+        title: 'Confirmar disponibilidad del paciente',
+        message: `Paciente fuera de casa${dto.reason ? `: ${dto.reason}` : ''}. Confirmar y reprogramar.`,
+        sourceType: 'confirm_patient_availability',
+        sourceId: id,
+      })
+    }
+
+    if (refused) {
+      if ((tx.refusalCount ?? 0) >= 3) {
+        // Alerta crítica para coordinación: evaluar paso a estado pasivo.
+        await this.alerts.raise({
+          patientId: visit.patientId,
+          type: AlertType.ADMINISTRATIVE,
+          severity: AlertSeverity.CRITICAL,
+          title: 'Considerar estado pasivo',
+          message: `El paciente acumula ${tx.refusalCount} rehúsos de atención. Evaluar paso a estado pasivo.`,
+          sourceType: 'consider_passive_status',
+          sourceId: visit.patientId,
+          dedup: true,
+        })
+        consideredPassive = true
+      } else {
+        await this.alerts.raise({
+          patientId: visit.patientId,
+          type: AlertType.ADMINISTRATIVE,
+          severity: AlertSeverity.HIGH,
+          title: 'Rehúso de atención',
+          message: `El paciente rehusó la atención${dto.reason ? `: ${dto.reason}` : ''}.`,
+          sourceType: 'visit',
+          sourceId: id,
+        })
+      }
+    }
+
+    return {
+      outcome: dto.outcome,
+      visitId: id,
+      status: VisitStatus.NO_SHOW,
+      refusalCount: tx.refusalCount,
+      nextVisitId: tx.nextVisitId,
+      consideredPassive,
+    }
+  }
+
+  /** Datos para clonar una visita (reintento/próxima). Copia equipo y domicilio. */
+  private copyVisitData(
+    visit: NonNullable<Awaited<ReturnType<VisitsRepository['findById']>>>,
+    scheduledDate: Date,
+    priority: VisitPriority,
+    typeOverride?: VisitType,
+  ): Prisma.VisitUncheckedCreateInput {
+    const type = typeOverride ?? visit.type
+    return {
+      patientId: visit.patientId,
+      type,
+      // Una visita REGULAR no lleva motivo extraordinario.
+      reason: type === VisitType.REGULAR ? null : visit.reason,
+      modality: visit.modality,
+      status: VisitStatus.SCHEDULED,
+      priority,
+      scheduledDate,
+      durationMin: visit.durationMin,
+      addressId: visit.addressId,
+      assignments: {
+        create: visit.assignments.map((a) => ({
+          userId: a.userId,
+          specialty: a.specialty,
+          isLead: a.isLead,
+        })),
+      },
+    }
   }
 
   /** Crea o actualiza el registro clínico dinámico de la visita (borrador/cierre). */

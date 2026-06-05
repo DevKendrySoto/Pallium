@@ -7,6 +7,7 @@ import { CadenceModule } from './cadence/cadence.module'
 import { CategoriesModule } from './categories/categories.module'
 import { ClinicalModule } from './clinical/clinical.module'
 import { ClinicalTemplatesModule } from './clinical-templates/clinical-templates.module'
+import { DashboardModule } from './dashboard/dashboard.module'
 import { AuditInterceptor } from './common/interceptors/audit.interceptor'
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard'
 import { PermissionsGuard } from './common/guards/permissions.guard'
@@ -47,6 +48,7 @@ import { VisitsModule } from './visits/visits.module'
     ScalesModule,
     CategoriesModule,
     ProfileModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
   providers: [
