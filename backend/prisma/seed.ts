@@ -919,6 +919,34 @@ async function main() {
     console.log(`  • admin ya existe: ${adminEmail}`)
   }
 
+  // Usuarios por rol (para probar RBAC y revisar plantillas). Idempotentes.
+  const staffPassword = process.env.STAFF_PASSWORD ?? 'Pallium123'
+  const staffHash = await argon2.hash(staffPassword)
+  const STAFF = [
+    { email: 'medico@pallium.local', fullName: 'Dra. Médico', roleCode: 'MEDICO' },
+    { email: 'enfermeria@pallium.local', fullName: 'Enf. Enfermería', roleCode: 'ENFERMERIA' },
+    { email: 'psicologia@pallium.local', fullName: 'Psic. Psicología', roleCode: 'PSICOLOGIA' },
+    { email: 'trabajosocial@pallium.local', fullName: 'T.S. Trabajo Social', roleCode: 'TRABAJO_SOCIAL' },
+    { email: 'fisiatra@pallium.local', fullName: 'Fis. Fisiatría', roleCode: 'FISIATRA' },
+    { email: 'agenda@pallium.local', fullName: 'Agenda y Citas', roleCode: 'AGENDA' },
+    { email: 'auditor@pallium.local', fullName: 'Auditor', roleCode: 'AUDITOR' },
+  ]
+  for (const u of STAFF) {
+    const role = await prisma.role.findUnique({ where: { code: u.roleCode } })
+    if (!role) continue
+    const user = await prisma.user.upsert({
+      where: { email: u.email },
+      update: { fullName: u.fullName, isActive: true },
+      create: { email: u.email, fullName: u.fullName, passwordHash: staffHash, isActive: true },
+    })
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: user.id, roleId: role.id } },
+      update: {},
+      create: { userId: user.id, roleId: role.id },
+    })
+  }
+  console.log(`  ✔ ${STAFF.length} usuarios por rol (clave: ${staffPassword})`)
+
   console.log('✅ Seed completado.')
 }
 
