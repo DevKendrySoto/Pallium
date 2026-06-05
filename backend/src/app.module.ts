@@ -9,6 +9,7 @@ import { ClinicalModule } from './clinical/clinical.module'
 import { ClinicalTemplatesModule } from './clinical-templates/clinical-templates.module'
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard'
 import { PermissionsGuard } from './common/guards/permissions.guard'
+import { ReadOnlyGuard } from './common/guards/read-only.guard'
 import { configuration } from './config/configuration'
 import { validateEnv } from './config/env.validation'
 import { DriversModule } from './drivers/drivers.module'
@@ -49,6 +50,7 @@ import { VisitsModule } from './visits/visits.module'
     // Orden importa: primero autentica (JWT), luego autoriza (permisos).
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_GUARD, useClass: ReadOnlyGuard },
   ],
 })
 export class AppModule {}

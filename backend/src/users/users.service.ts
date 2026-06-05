@@ -27,11 +27,14 @@ export class UsersService {
         permissions.add(rp.permission.code)
       }
     }
+    // Solo lectura si tiene roles y todos son de solo lectura (p. ej. Auditor).
+    const isReadOnly = user.roles.length > 0 && user.roles.every((ur) => ur.role.isReadOnly)
     return {
       id: user.id,
       email: user.email,
       roles,
       permissions: [...permissions],
+      isReadOnly,
     }
   }
 }

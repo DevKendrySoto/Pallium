@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common'
 import { CurrentUser } from '../common/decorators/current-user.decorator'
 import { RequirePermissions } from '../common/decorators/permissions.decorator'
+import type { AuthenticatedUser } from '../common/types/authenticated-user'
 import { AssignProfessionalsDto } from './dto/assign-professionals.dto'
 import { CreateVisitDto } from './dto/create-visit.dto'
 import { ListVisitsDto } from './dto/list-visits.dto'
@@ -88,9 +89,9 @@ export class VisitsController {
   saveClinicalRecord(
     @Param('id') id: string,
     @Body() dto: SaveClinicalRecordDto,
-    @CurrentUser('id') userId: string,
+    @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.visits.saveClinicalRecord(id, dto, userId)
+    return this.visits.saveClinicalRecord(id, dto, user)
   }
 
   @Post(':id/signature')

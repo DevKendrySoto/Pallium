@@ -41,6 +41,7 @@ export class AuthService {
       email: ctx.email,
       roles: ctx.roles,
       permissions: ctx.permissions,
+      isReadOnly: ctx.isReadOnly,
     }
     const refreshPayload: RefreshPayload = { sub: ctx.id }
 
