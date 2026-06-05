@@ -1,13 +1,19 @@
+'use client'
+
 import { Bell, CalendarCheck, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-
-const KPIS = [
-  { label: 'Pacientes activos', value: '--', icon: Users },
-  { label: 'Visitas hoy', value: '--', icon: CalendarCheck },
-  { label: 'Alertas', value: '--', icon: Bell },
-]
+import { Skeleton } from '@/components/ui/skeleton'
+import { useDashboardKpis } from '@/features/dashboard'
 
 export default function DashboardPage() {
+  const kpis = useDashboardKpis()
+
+  const cards = [
+    { label: 'Pacientes activos', value: kpis.activePatients, icon: Users },
+    { label: 'Visitas hoy', value: kpis.visitsToday, icon: CalendarCheck },
+    { label: 'Alertas abiertas', value: kpis.openAlerts, icon: Bell },
+  ]
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -18,7 +24,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {KPIS.map((kpi) => {
+        {cards.map((kpi) => {
           const Icon = kpi.icon
           return (
             <Card key={kpi.label} className="border-slate-200">
@@ -29,7 +35,13 @@ export default function DashboardPage() {
                 <Icon size={18} className="text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-semibold tracking-tight">{kpi.value}</div>
+                {kpis.isLoading ? (
+                  <Skeleton className="h-9 w-16" />
+                ) : (
+                  <div className="text-3xl font-semibold tracking-tight">
+                    {kpis.isError ? '—' : (kpi.value ?? 0)}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )
