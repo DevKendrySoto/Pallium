@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { PrismaClient, ScaleCategory } from '@prisma/client'
+import { PrismaClient, ScaleCategory, Specialty } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import * as argon2 from 'argon2'
 
@@ -657,6 +657,169 @@ const SCALES = [
 ]
 
 // ============================================================================
+//  PLANTILLAS CLÍNICAS (muestra — validan el patrón antes de las 15)
+// ============================================================================
+
+const TEMPLATES = [
+  {
+    key: 'medical_adult_palliative',
+    name: 'Médico · Paliativo adulto',
+    specialty: Specialty.MEDICINE,
+    categoryCode: 'PALLIATIVE_ADULT',
+    version: 1,
+    sections: [
+      {
+        key: 'evolution',
+        title: 'Motivo y evolución',
+        components: [
+          {
+            type: 'FieldsGroup',
+            key: 'evolutionGroup',
+            config: {
+              columns: 1,
+              fields: [
+                { key: 'chiefComplaint', label: 'Motivo de la visita', type: 'textarea' },
+                { key: 'evolution', label: 'Evolución desde la última visita', type: 'textarea' },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        key: 'exam',
+        title: 'Exploración y signos vitales',
+        components: [
+          { type: 'VitalSignsBlock', key: 'vitals', config: {} },
+          { type: 'ConsciousnessLevel', key: 'consciousness', config: { scale: 'AVDI' } },
+        ],
+      },
+      {
+        key: 'symptoms',
+        title: 'Síntomas',
+        components: [{ type: 'SymptomChecklist', key: 'symptoms', config: { scale: '0-10' } }],
+      },
+      {
+        key: 'scales',
+        title: 'Escalas',
+        components: [
+          { type: 'ScaleApplication', key: 'scales', config: { scales: ['PPS', 'PPI', 'ESAS_R'] } },
+        ],
+      },
+      {
+        key: 'plan',
+        title: 'Plan y medicación',
+        components: [
+          { type: 'MedicationDelta', key: 'medication', config: { allowActions: ['add', 'adjust', 'suspend'] } },
+          { type: 'RecommendationsList', key: 'recommendations', config: {} },
+        ],
+      },
+      {
+        key: 'followup',
+        title: 'Interconsultas y próxima visita',
+        components: [
+          { type: 'InterconsultRequest', key: 'interconsult', config: { targetRoles: ['NURSING', 'PSYCHOLOGY', 'SOCIAL_WORK', 'PHYSIOTHERAPY'] } },
+          { type: 'NextAppointmentScheduler', key: 'nextAppointment', config: { suggestFromCadence: true } },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'nursing_adult_palliative',
+    name: 'Enfermería · Paliativo adulto',
+    specialty: Specialty.NURSING,
+    categoryCode: 'PALLIATIVE_ADULT',
+    version: 1,
+    sections: [
+      { key: 'vitals', title: 'Signos vitales', components: [{ type: 'VitalSignsBlock', key: 'vitals', config: {} }] },
+      {
+        key: 'status',
+        title: 'Estado funcional y conciencia',
+        components: [
+          { type: 'FunctionalStatus', key: 'functional', config: { mode: 'scale', scaleCode: 'PPS' } },
+          { type: 'ConsciousnessLevel', key: 'consciousness', config: { scale: 'AVDI' } },
+        ],
+      },
+      {
+        key: 'symptoms',
+        title: 'Síntomas',
+        components: [{ type: 'SymptomChecklist', key: 'symptoms', config: { scale: '0-10' } }],
+      },
+      {
+        key: 'wounds',
+        title: 'Heridas y curaciones',
+        components: [
+          { type: 'WoundTracker', key: 'wounds', config: { stagingScale: 'NPUAP' } },
+          { type: 'PhotoAttachment', key: 'photos', config: { maxPhotos: 6 } },
+        ],
+      },
+      {
+        key: 'medication',
+        title: 'Medicación y adherencia',
+        components: [
+          { type: 'MedicationDelta', key: 'medication', config: { allowActions: ['adjust', 'suspend'] } },
+          { type: 'AdherenceAssessment', key: 'adherence', config: { dimensions: ['medication', 'careplan'] } },
+        ],
+      },
+      {
+        key: 'caregiver',
+        title: 'Cuidador y educación',
+        components: [
+          { type: 'CaregiverStatus', key: 'caregiver', config: { assessBurden: true } },
+          { type: 'RecommendationsList', key: 'education', config: {} },
+        ],
+      },
+    ],
+  },
+  {
+    key: 'phone_followup',
+    name: 'Seguimiento telefónico',
+    specialty: null,
+    categoryCode: null, // aplica a todas las categorías
+    version: 1,
+    sections: [
+      {
+        key: 'call',
+        title: 'Identificación de la llamada',
+        components: [
+          {
+            type: 'FieldsGroup',
+            key: 'callGroup',
+            config: {
+              columns: 2,
+              fields: [
+                { key: 'answeredBy', label: 'Atendió', type: 'radio', options: ['Paciente', 'Cuidador', 'Familiar', 'No contesta'] },
+                { key: 'reason', label: 'Motivo', type: 'text' },
+              ],
+            },
+          },
+        ],
+      },
+      {
+        key: 'status',
+        title: 'Síntomas y estado',
+        components: [
+          { type: 'SymptomChecklist', key: 'symptoms', config: { symptoms: ['dolor', 'disnea', 'nausea', 'ansiedad'], scale: '0-10' } },
+          {
+            type: 'FieldsGroup',
+            key: 'general',
+            config: { columns: 1, fields: [{ key: 'generalState', label: 'Estado general referido', type: 'textarea' }] },
+          },
+        ],
+      },
+      {
+        key: 'plan',
+        title: 'Plan',
+        components: [
+          { type: 'RecommendationsList', key: 'recommendations', config: {} },
+          { type: 'InterconsultRequest', key: 'interconsult', config: { targetRoles: ['MEDICINE', 'NURSING'] } },
+          { type: 'NextAppointmentScheduler', key: 'nextAppointment', config: {} },
+        ],
+      },
+    ],
+  },
+]
+
+// ============================================================================
 //  EJECUCIÓN
 // ============================================================================
 
@@ -725,6 +888,16 @@ async function main() {
     })
   }
   console.log(`  ✔ ${SCALES.length} escalas`)
+
+  // Plantillas clínicas
+  for (const t of TEMPLATES) {
+    await prisma.clinicalTemplate.upsert({
+      where: { key: t.key },
+      update: { name: t.name, specialty: t.specialty, categoryCode: t.categoryCode, version: t.version, sections: t.sections },
+      create: t,
+    })
+  }
+  console.log(`  ✔ ${TEMPLATES.length} plantillas clínicas`)
 
   // Usuario administrador inicial (solo si no existe).
   const adminRole = await prisma.role.findUniqueOrThrow({ where: { code: 'ADMIN' } })
