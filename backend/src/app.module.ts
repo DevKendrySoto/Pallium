@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { AlertsModule } from './alerts/alerts.module'
+import { AuditModule } from './audit/audit.module'
 import { AuthModule } from './auth/auth.module'
 import { CadenceModule } from './cadence/cadence.module'
 import { CategoriesModule } from './categories/categories.module'
@@ -48,6 +49,7 @@ import { VisitsModule } from './visits/visits.module'
     ScalesModule,
     CategoriesModule,
     ProfileModule,
+    AuditModule,
     DashboardModule,
   ],
   controllers: [HealthController],
