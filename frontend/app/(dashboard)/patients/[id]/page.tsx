@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import { PatientStatusBadge } from '@/components/patients/patient-status-badge'
 import { PatientTimeline } from '@/components/patients/patient-timeline'
 import { ClinicalTab } from '@/components/patients/profile/clinical-tab'
+import { SocialTab } from '@/components/patients/profile/social-tab'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -104,6 +105,7 @@ export default function PatientDetailPage() {
             <TabsList>
               <TabsTrigger value="resumen">Resumen</TabsTrigger>
               <TabsTrigger value="clinico">Clínico</TabsTrigger>
+              <TabsTrigger value="social">Social</TabsTrigger>
               <TabsTrigger value="historial">Historial</TabsTrigger>
             </TabsList>
 
@@ -133,6 +135,10 @@ export default function PatientDetailPage() {
 
             <TabsContent value="clinico" className="pt-4">
               <ClinicalTab patientId={patient.id} />
+            </TabsContent>
+
+            <TabsContent value="social" className="pt-4">
+              <SocialTab patientId={patient.id} />
             </TabsContent>
 
             <TabsContent value="historial" className="pt-4">
