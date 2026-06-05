@@ -25,11 +25,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
+import { useAuthStore } from '@/lib/auth-store'
 
 interface NavItem {
   label: string
   href: string
   icon: React.ComponentType<{ size?: number }>
+  /** Si está definido, el ítem solo se muestra si el usuario tiene el permiso. */
+  permission?: string
 }
 
 const NAV: { group: string; items: NavItem[] }[] = [
@@ -53,8 +56,8 @@ const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: 'Administración',
     items: [
-      { label: 'Usuarios', href: '#', icon: UserCog },
-      { label: 'Auditoría', href: '#', icon: ScrollText },
+      { label: 'Usuarios', href: '/usuarios', icon: UserCog, permission: 'user:read' },
+      { label: 'Auditoría', href: '/auditoria', icon: ScrollText, permission: 'audit:read' },
       { label: 'Configuración', href: '#', icon: Settings },
     ],
   },
@@ -62,6 +65,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const permissions = useAuthStore((s) => s.user?.permissions ?? [])
 
   return (
     <Sidebar>
@@ -72,11 +76,14 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        {NAV.map((section) => (
-          <SidebarGroup key={section.group}>
-            <SidebarGroupLabel>{section.group}</SidebarGroupLabel>
-            <SidebarMenu>
-              {section.items.map((item) => {
+        {NAV.map((section) => {
+          const items = section.items.filter((i) => !i.permission || permissions.includes(i.permission))
+          if (items.length === 0) return null
+          return (
+            <SidebarGroup key={section.group}>
+              <SidebarGroupLabel>{section.group}</SidebarGroupLabel>
+              <SidebarMenu>
+                {items.map((item) => {
                 const Icon = item.icon
                 const isActive = item.href !== '#' && pathname === item.href
                 return (
@@ -89,10 +96,11 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 )
-              })}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+                })}
+              </SidebarMenu>
+            </SidebarGroup>
+          )
+        })}
       </SidebarContent>
     </Sidebar>
   )
