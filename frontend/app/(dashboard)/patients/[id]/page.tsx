@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { PatientStatusBadge } from '@/components/patients/patient-status-badge'
 import { PatientTimeline } from '@/components/patients/patient-timeline'
+import { ClinicalTab } from '@/components/patients/profile/clinical-tab'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -98,29 +100,45 @@ export default function PatientDetailPage() {
             </div>
           </div>
 
-          <Card className="border-slate-200">
-            <CardHeader>
-              <CardTitle className="text-base">Datos del paciente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                <Field
-                  label="Identificación"
-                  value={`${ID_TYPE_LABELS[patient.identificationType]} · ${patient.identificationNo}`}
-                />
-                <Field label="Sexo" value={SEX_LABELS[patient.sex]} />
-                <Field label="Fecha de nacimiento" value={fmtDate(patient.birthDate)} />
-                <Field label="Categoría" value={patient.category?.name} />
-                <Field label="Estado" value={STATUS_LABELS[patient.status]} />
-                <Field label="Teléfono" value={patient.phone} />
-                <Field label="Correo" value={patient.email} />
-                <Field label="Admisión" value={fmtDate(patient.admittedAt)} />
-                <Field label="Próxima visita regular" value={fmtDate(patient.nextRegularVisitDue)} />
-              </dl>
-            </CardContent>
-          </Card>
+          <Tabs defaultValue="resumen">
+            <TabsList>
+              <TabsTrigger value="resumen">Resumen</TabsTrigger>
+              <TabsTrigger value="clinico">Clínico</TabsTrigger>
+              <TabsTrigger value="historial">Historial</TabsTrigger>
+            </TabsList>
 
-          <PatientTimeline patientId={patient.id} />
+            <TabsContent value="resumen" className="pt-4">
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <CardTitle className="text-base">Datos del paciente</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    <Field
+                      label="Identificación"
+                      value={`${ID_TYPE_LABELS[patient.identificationType]} · ${patient.identificationNo}`}
+                    />
+                    <Field label="Sexo" value={SEX_LABELS[patient.sex]} />
+                    <Field label="Fecha de nacimiento" value={fmtDate(patient.birthDate)} />
+                    <Field label="Categoría" value={patient.category?.name} />
+                    <Field label="Estado" value={STATUS_LABELS[patient.status]} />
+                    <Field label="Teléfono" value={patient.phone} />
+                    <Field label="Correo" value={patient.email} />
+                    <Field label="Admisión" value={fmtDate(patient.admittedAt)} />
+                    <Field label="Próxima visita regular" value={fmtDate(patient.nextRegularVisitDue)} />
+                  </dl>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="clinico" className="pt-4">
+              <ClinicalTab patientId={patient.id} />
+            </TabsContent>
+
+            <TabsContent value="historial" className="pt-4">
+              <PatientTimeline patientId={patient.id} />
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </div>
