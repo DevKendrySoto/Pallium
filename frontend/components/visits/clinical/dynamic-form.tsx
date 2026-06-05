@@ -4,19 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { MedicationDelta } from '@/components/visits/clinical/medication-delta'
+import { ScaleApplication } from '@/components/visits/clinical/scale-application'
+import { WoundTracker } from '@/components/visits/clinical/wound-tracker'
 import type {
+  ClinicalCtx,
   ClinicalRecordSections,
+  CompProps,
   TemplateComponent,
   TemplateField,
   TemplateSection,
 } from '@/types/clinical'
 
 type Value = Record<string, unknown>
-interface CompProps {
-  config: Record<string, unknown>
-  value: Value
-  onChange: (next: Value) => void
-}
 
 /** Botón tipo chip/radio (evita selects para pocas opciones). */
 function Choice({
@@ -161,31 +161,6 @@ function VitalSignsBlock({ value, onChange }: CompProps) {
   )
 }
 
-function ScaleApplication({ config, value, onChange }: CompProps) {
-  const scales = (config.scales as string[]) ?? []
-  return (
-    <div className="space-y-3">
-      <p className="text-xs text-muted-foreground">
-        Captura simplificada del puntaje (la aplicación completa de ítems se integra en una fase
-        posterior).
-      </p>
-      {scales.map((code) => (
-        <div key={code} className="flex items-center gap-3">
-          <Label className="w-28 text-sm">{code}</Label>
-          <Input
-            type="number"
-            className="max-w-32"
-            value={(value[code] as number) ?? ''}
-            onChange={(e) =>
-              onChange({ ...value, [code]: e.target.value ? Number(e.target.value) : undefined })
-            }
-          />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function RecommendationsList({ value, onChange }: CompProps) {
   return (
     <textarea
@@ -202,16 +177,20 @@ const RENDERERS: Record<string, React.ComponentType<CompProps>> = {
   VitalSignsBlock,
   ScaleApplication,
   RecommendationsList,
+  WoundTracker,
+  MedicationDelta,
 }
 
 function ComponentRenderer({
   component,
   value,
   onChange,
+  ctx,
 }: {
   component: TemplateComponent
   value: Value
   onChange: (next: Value) => void
+  ctx?: ClinicalCtx
 }) {
   const Impl = RENDERERS[component.type]
   if (!Impl) {
@@ -222,18 +201,20 @@ function ComponentRenderer({
       </p>
     )
   }
-  return <Impl config={component.config} value={value} onChange={onChange} />
+  return <Impl config={component.config} value={value} onChange={onChange} ctx={ctx} />
 }
 
 export function DynamicForm({
   sections,
   value,
   onChange,
+  ctx,
   disabled,
 }: {
   sections: TemplateSection[]
   value: ClinicalRecordSections
   onChange: (next: ClinicalRecordSections) => void
+  ctx?: ClinicalCtx
   disabled?: boolean
 }) {
   function update(sectionKey: string, componentKey: string, next: Value) {
@@ -257,6 +238,7 @@ export function DynamicForm({
                 component={c}
                 value={(value[section.key]?.[c.key] as Value) ?? {}}
                 onChange={(next) => update(section.key, c.key, next)}
+                ctx={ctx}
               />
             ))}
           </CardContent>

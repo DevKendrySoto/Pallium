@@ -178,7 +178,12 @@ export default function VisitPage() {
             </p>
           </div>
           {template ? (
-            <DynamicForm sections={template.sections} value={form} onChange={setForm} />
+            <DynamicForm
+              sections={template.sections}
+              value={form}
+              onChange={setForm}
+              ctx={{ patientId: visit.patientId, visitId: id }}
+            />
           ) : (
             <Skeleton className="h-48 w-full" />
           )}
