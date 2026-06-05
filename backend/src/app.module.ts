@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { APP_GUARD } from '@nestjs/core'
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core'
 import { AlertsModule } from './alerts/alerts.module'
 import { AuthModule } from './auth/auth.module'
 import { CadenceModule } from './cadence/cadence.module'
 import { CategoriesModule } from './categories/categories.module'
 import { ClinicalModule } from './clinical/clinical.module'
 import { ClinicalTemplatesModule } from './clinical-templates/clinical-templates.module'
+import { AuditInterceptor } from './common/interceptors/audit.interceptor'
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard'
 import { PermissionsGuard } from './common/guards/permissions.guard'
 import { ReadOnlyGuard } from './common/guards/read-only.guard'
@@ -51,6 +52,7 @@ import { VisitsModule } from './visits/visits.module'
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
     { provide: APP_GUARD, useClass: ReadOnlyGuard },
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
 export class AppModule {}
