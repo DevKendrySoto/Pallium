@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common'
-import { AlertSeverity, AlertStatus, AlertType, VisitStatus } from '@prisma/client'
+import { AlertSeverity, AlertStatus, AlertType, type Specialty, VisitStatus } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 
 /** Severidades relevantes para la bandeja (medium o superior). */
@@ -14,6 +14,9 @@ const ACTIVE_VISIT_STATUSES = [
   VisitStatus.IN_PROGRESS,
 ]
 
+/** Campo del modelo Route que vincula al clínico (enfermera o médico) con la ruta. */
+export type RouteAssignmentField = 'assignedNursingId' | 'assignedMedicalId'
+
 function startOfDay(d: Date): Date {
   const x = new Date(d)
   x.setHours(0, 0, 0, 0)
@@ -26,32 +29,36 @@ function addDays(d: Date, days: number): Date {
 }
 
 /**
- * Consultas de solo lectura para componer dashboards. No reimplementa lógica de
- * negocio (eso vive en los services); solo agrega datos para la vista.
+ * Consultas de solo lectura para componer dashboards de clínicos. No reimplementa
+ * lógica de negocio (eso vive en los services); solo agrega datos para la vista.
  */
 @Injectable()
 export class DashboardRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Una enfermera atiende una visita si está en su ruta o asignada directamente. */
-  private nurseVisitWhere(nurseId: string) {
+  /** Un clínico atiende una visita si está asignado directamente o vía su ruta. */
+  private clinicianVisitWhere(userId: string, routeField: RouteAssignmentField) {
     return {
       OR: [
-        { assignments: { some: { userId: nurseId } } },
-        { routeStop: { route: { assignedNursingId: nurseId } } },
+        { assignments: { some: { userId } } },
+        { routeStop: { route: { [routeField]: userId } } },
       ],
     }
   }
 
-  /** Visitas de la enfermera para el día indicado, con datos del paciente y ruta. */
-  nurseVisitsOnDate(nurseId: string, day: Date) {
+  /** Visitas del clínico para el día, con paciente, ruta y registros de su especialidad. */
+  clinicianVisitsOnDate(
+    userId: string,
+    opts: { routeField: RouteAssignmentField; specialty: Specialty },
+    day: Date,
+  ) {
     const start = startOfDay(day)
     const end = addDays(start, 1)
     return this.prisma.visit.findMany({
       where: {
         scheduledDate: { gte: start, lt: end },
         status: { not: VisitStatus.RESCHEDULED },
-        ...this.nurseVisitWhere(nurseId),
+        ...this.clinicianVisitWhere(userId, opts.routeField),
       },
       select: {
         id: true,
@@ -60,7 +67,11 @@ export class DashboardRepository {
         status: true,
         outcome: true,
         routeStop: { select: { sequence: true, routeId: true } },
-        _count: { select: { clinicalRecords: true } },
+        // Registros de la especialidad del clínico (para "pendiente de nota").
+        clinicalRecords: {
+          where: { specialty: opts.specialty, deletedAt: null },
+          select: { id: true },
+        },
         address: { select: { line1: true, city: true } },
         patient: {
           select: {
@@ -68,26 +79,18 @@ export class DashboardRepository {
             firstName: true,
             lastName: true,
             birthDate: true,
-            addresses: {
-              where: { isPrimary: true },
-              take: 1,
-              select: { line1: true, city: true },
-            },
-            caregivers: {
-              where: { isPrimary: true },
-              take: 1,
-              select: { fullName: true, phone: true },
-            },
+            addresses: { where: { isPrimary: true }, take: 1, select: { line1: true, city: true } },
+            caregivers: { where: { isPrimary: true }, take: 1, select: { fullName: true, phone: true } },
           },
         },
       },
     })
   }
 
-  /** IDs de pacientes bajo cuidado de la enfermera (visitas activas). */
-  async assignedActivePatientIds(nurseId: string): Promise<string[]> {
+  /** IDs de pacientes bajo cuidado del clínico (visitas activas). */
+  async assignedActivePatientIds(userId: string, routeField: RouteAssignmentField): Promise<string[]> {
     const visits = await this.prisma.visit.findMany({
-      where: { status: { in: ACTIVE_VISIT_STATUSES }, ...this.nurseVisitWhere(nurseId) },
+      where: { status: { in: ACTIVE_VISIT_STATUSES }, ...this.clinicianVisitWhere(userId, routeField) },
       select: { patientId: true },
     })
     return [...new Set(visits.map((v) => v.patientId))]

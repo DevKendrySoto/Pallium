@@ -95,3 +95,13 @@ export const NURSE_QUICK_ACTIONS: QuickAction[] = [
   { key: 'mark_care_refused', label: 'Rehúso de atención' },
   { key: 'reschedule', label: 'Reprogramar' },
 ]
+
+/** Catálogo de acciones rápidas para el médico (registra nota médica + escala). */
+export const MEDICO_QUICK_ACTIONS: QuickAction[] = [
+  { key: 'start_visit', label: 'Registrar visita médica' },
+  { key: 'apply_scale', label: 'Aplicar escala' },
+  { key: 'mark_patient_absent', label: 'Paciente fuera de casa' },
+  { key: 'mark_out_of_time', label: 'Fuera de tiempo' },
+  { key: 'mark_care_refused', label: 'Rehúso de atención' },
+  { key: 'reschedule', label: 'Reprogramar' },
+]

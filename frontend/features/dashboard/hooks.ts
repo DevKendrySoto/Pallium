@@ -2,7 +2,18 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { useAuthStore } from '@/lib/auth-store'
 import { type DashboardResponse, dashboardResponseSchema } from './types'
+
+/** Rol clínico → especialidad de la nota que registra. */
+const ROLE_SPECIALTY: Record<string, string> = {
+  MEDICO: 'MEDICINE',
+  COORDINADOR_MEDICO: 'MEDICINE',
+  ENFERMERIA: 'NURSING',
+  PSICOLOGIA: 'PSYCHOLOGY',
+  TRABAJO_SOCIAL: 'SOCIAL_WORK',
+  FISIATRA: 'PHYSIOTHERAPY',
+}
 
 export const dashboardKeys = {
   me: ['dashboard', 'me'] as const,
@@ -44,13 +55,16 @@ export function useVisitOutcome() {
   })
 }
 
-/** "Iniciar visita": guarda un registro de enfermería mínimo y completa la visita. */
+/** "Iniciar visita": guarda un registro mínimo de la especialidad del usuario y completa la visita. */
 export function useStartVisitComplete() {
   const invalidate = useInvalidateDashboard()
+  // Selecciona la referencia estable (no crear array nuevo en el selector → evita loop).
+  const roles = useAuthStore((s) => s.user?.roles)
+  const specialty = (roles ?? []).map((r) => ROLE_SPECIALTY[r]).find(Boolean) ?? 'NURSING'
   return useMutation({
     mutationFn: async ({ id, note }: { id: string; note: string }) => {
       await api.post(`/visits/${id}/clinical-record`, {
-        specialty: 'NURSING',
+        specialty,
         summary: note.slice(0, 120),
         data: { nota: note },
       })

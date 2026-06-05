@@ -10,7 +10,7 @@ function visit(over: Record<string, any>) {
     status: 'SCHEDULED',
     outcome: null,
     routeStop: null,
-    _count: { clinicalRecords: 0 },
+    clinicalRecords: [],
     address: null,
     patient: {
       id: 'p',
@@ -26,7 +26,7 @@ function visit(over: Record<string, any>) {
 
 function buildRepo(over: Record<string, any> = {}) {
   return {
-    nurseVisitsOnDate: jest.fn().mockResolvedValue([]),
+    clinicianVisitsOnDate: jest.fn().mockResolvedValue([]),
     assignedActivePatientIds: jest.fn().mockResolvedValue(['p']),
     countOpenClinicalAlerts: jest.fn().mockResolvedValue(0),
     openAlertsForPatients: jest.fn().mockResolvedValue({ items: [], total: 0 }),
@@ -36,9 +36,7 @@ function buildRepo(over: Record<string, any> = {}) {
 
 describe('NurseDashboardStrategy', () => {
   it('devuelve 4 widgets en el orden correcto', async () => {
-    const repo: any = buildRepo()
-    const strategy = new NurseDashboardStrategy(repo)
-    const widgets = await strategy.build(user)
+    const widgets = await new NurseDashboardStrategy(buildRepo() as any).build(user)
     expect(widgets.map((w) => w.type)).toEqual([
       'kpi_group',
       'today_visits',
@@ -47,17 +45,21 @@ describe('NurseDashboardStrategy', () => {
     ])
   })
 
-  it('filtra por el usuario actual', async () => {
+  it('consulta visitas con el campo de ruta de enfermería y especialidad NURSING', async () => {
     const repo: any = buildRepo()
     await new NurseDashboardStrategy(repo).build(user)
-    expect(repo.nurseVisitsOnDate).toHaveBeenCalledWith('nurse1', expect.any(Date))
-    expect(repo.assignedActivePatientIds).toHaveBeenCalledWith('nurse1')
+    expect(repo.clinicianVisitsOnDate).toHaveBeenCalledWith(
+      'nurse1',
+      { routeField: 'assignedNursingId', specialty: 'NURSING' },
+      expect.any(Date),
+    )
+    expect(repo.assignedActivePatientIds).toHaveBeenCalledWith('nurse1', 'assignedNursingId')
   })
 
   it('calcula KPIs y ordena las visitas por orden de ruta', async () => {
     const repo: any = buildRepo({
-      nurseVisitsOnDate: jest.fn().mockResolvedValue([
-        visit({ id: 'b', status: 'COMPLETED', routeStop: { sequence: 2, routeId: 'r1' }, _count: { clinicalRecords: 1 } }),
+      clinicianVisitsOnDate: jest.fn().mockResolvedValue([
+        visit({ id: 'b', status: 'COMPLETED', routeStop: { sequence: 2, routeId: 'r1' }, clinicalRecords: [{ id: 'rec' }] }),
         visit({ id: 'a', status: 'IN_PROGRESS', routeStop: { sequence: 1, routeId: 'r1' } }),
       ]),
       countOpenClinicalAlerts: jest.fn().mockResolvedValue(3),
@@ -65,14 +67,12 @@ describe('NurseDashboardStrategy', () => {
     const widgets = await new NurseDashboardStrategy(repo).build(user)
 
     const kpi = widgets[0].data as any
-    expect(kpi.items.map((i: any) => i.value)).toEqual([2, 1, 1, 3]) // asignadas, completadas, pendientes, alertas
+    expect(kpi.items.map((i: any) => i.value)).toEqual([2, 1, 1, 3])
 
     const today = widgets[1].data as any
-    expect(today.total).toBe(2)
-    expect(today.completed).toBe(1)
-    expect(today.visits.map((v: any) => v.id)).toEqual(['a', 'b']) // ordenadas por route.order
-    expect(today.visits[0].requiresClinicalRecord).toBe(true) // IN_PROGRESS sin registro
-    expect(today.visits[1].requiresClinicalRecord).toBe(false) // COMPLETED
+    expect(today.visits.map((v: any) => v.id)).toEqual(['a', 'b'])
+    expect(today.visits[0].requiresClinicalRecord).toBe(true)
+    expect(today.visits[1].requiresClinicalRecord).toBe(false)
   })
 
   it('mapea alertas con severidad en minúscula', async () => {

@@ -1,6 +1,7 @@
 'use client'
 
-import { CalendarClock, Clock, Loader2, Stethoscope, UserX, XCircle } from 'lucide-react'
+import { CalendarClock, ClipboardList, Clock, Loader2, Stethoscope, UserX, XCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { useDashboardSelection } from '@/components/dashboard/dashboard-context'
@@ -27,6 +28,7 @@ type Modal = 'start' | 'absent' | 'outoftime' | 'refused' | 'reschedule' | null
 
 const ACTION_ICON: Record<string, React.ComponentType<{ size?: number }>> = {
   start_visit: Stethoscope,
+  apply_scale: ClipboardList,
   mark_patient_absent: UserX,
   mark_out_of_time: Clock,
   mark_care_refused: XCircle,
@@ -50,6 +52,7 @@ export function QuickActionsWidget({ data }: { data: unknown }) {
   const [note, setNote] = useState('')
   const [newDate, setNewDate] = useState('')
 
+  const router = useRouter()
   const outcome = useVisitOutcome()
   const start = useStartVisitComplete()
   const reschedule = useRescheduleVisit()
@@ -125,7 +128,10 @@ export function QuickActionsWidget({ data }: { data: unknown }) {
                   disabled={pending || isCompleted}
                   onClick={() => {
                     if (action.key === 'start_visit') setModal('start')
-                    else if (action.key === 'mark_patient_absent') setModal('absent')
+                    else if (action.key === 'apply_scale') {
+                      if (selectedVisit) router.push(`/patients/${selectedVisit.patient.id}?tab=clinico`)
+                      close()
+                    } else if (action.key === 'mark_patient_absent') setModal('absent')
                     else if (action.key === 'mark_out_of_time') setModal('outoftime')
                     else if (action.key === 'mark_care_refused') setModal('refused')
                     else if (action.key === 'reschedule') setModal('reschedule')

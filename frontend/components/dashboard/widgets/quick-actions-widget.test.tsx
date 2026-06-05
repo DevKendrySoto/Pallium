@@ -9,6 +9,7 @@ import { QuickActionsWidget } from './quick-actions-widget'
 
 vi.mock('@/lib/api', () => ({ api: { post: vi.fn(), patch: vi.fn() } }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn() } }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { api } from '@/lib/api'
