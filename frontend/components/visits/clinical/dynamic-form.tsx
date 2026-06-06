@@ -4,6 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import {
+  AdherenceAssessment,
+  CaregiverStatus,
+  ConsciousnessLevel,
+  FunctionalStatus,
+  InterconsultRequest,
+  NextAppointmentScheduler,
+  SymptomChecklist,
+} from '@/components/visits/clinical/additional-components'
 import { MedicationDelta } from '@/components/visits/clinical/medication-delta'
 import { PhotoAttachment } from '@/components/visits/clinical/photo-attachment'
 import { ScaleApplication } from '@/components/visits/clinical/scale-application'
@@ -181,6 +190,13 @@ const RENDERERS: Record<string, React.ComponentType<CompProps>> = {
   WoundTracker,
   MedicationDelta,
   PhotoAttachment,
+  SymptomChecklist,
+  ConsciousnessLevel,
+  FunctionalStatus,
+  CaregiverStatus,
+  AdherenceAssessment,
+  InterconsultRequest,
+  NextAppointmentScheduler,
 }
 
 function ComponentRenderer({
