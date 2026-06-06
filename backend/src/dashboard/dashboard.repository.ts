@@ -4,6 +4,7 @@ import {
   AlertStatus,
   AlertType,
   PatientStatus,
+  RouteStatus,
   type Specialty,
   VisitStatus,
 } from '@prisma/client'
@@ -175,6 +176,88 @@ export class DashboardRepository {
   /** Alertas administrativas abiertas (alcance clínica), más recientes primero. */
   async openAdministrativeAlerts(limit: number) {
     const where = { type: AlertType.ADMINISTRATIVE, status: AlertStatus.OPEN }
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.alert.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          type: true,
+          severity: true,
+          title: true,
+          createdAt: true,
+          patient: { select: { id: true, firstName: true, lastName: true } },
+        },
+      }),
+      this.prisma.alert.count({ where }),
+    ])
+    return { items, total }
+  }
+
+  // ===== Coordinador médico (supervisión, alcance clínica) =====
+
+  /** Alertas críticas abiertas (alcance clínica). */
+  countOpenCriticalAlerts(): Promise<number> {
+    return this.prisma.alert.count({
+      where: { status: AlertStatus.OPEN, severity: AlertSeverity.CRITICAL },
+    })
+  }
+
+  /** Rutas de hoy a las que les falta médico y/o enfermera (no canceladas/completadas). */
+  routesTodayMissingTeam(day: Date) {
+    const start = startOfDay(day)
+    const end = addDays(start, 1)
+    return this.prisma.route.findMany({
+      where: {
+        routeDate: { gte: start, lt: end },
+        status: { notIn: [RouteStatus.CANCELLED, RouteStatus.COMPLETED] },
+        OR: [{ assignedMedicalId: null }, { assignedNursingId: null }],
+      },
+      orderBy: { routeDate: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        assignedMedicalId: true,
+        assignedNursingId: true,
+        _count: { select: { stops: true } },
+      },
+    })
+  }
+
+  /** Pacientes activos candidatos a revisar estado (rehúsos acumulados ≥ 3). */
+  async patientsToReview(limit: number) {
+    const where = {
+      deletedAt: null,
+      status: PatientStatus.ACTIVE,
+      refusalCount: { gte: 3 },
+    }
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.patient.findMany({
+        where,
+        orderBy: { refusalCount: 'desc' },
+        take: limit,
+        select: { id: true, mrn: true, firstName: true, lastName: true, refusalCount: true },
+      }),
+      this.prisma.patient.count({ where }),
+    ])
+    return { items, total }
+  }
+
+  /** Admisiones (pacientes creados) en los últimos N días. */
+  countRecentAdmissions(days: number): Promise<number> {
+    const since = addDays(startOfDay(new Date()), -days)
+    return this.prisma.patient.count({
+      where: { deletedAt: null, createdAt: { gte: since } },
+    })
+  }
+
+  /** Alertas severas abiertas (high/critical, alcance clínica), más recientes primero. */
+  async openSevereAlerts(limit: number) {
+    const where = {
+      status: AlertStatus.OPEN,
+      severity: { in: [AlertSeverity.HIGH, AlertSeverity.CRITICAL] },
+    }
     const [items, total] = await this.prisma.$transaction([
       this.prisma.alert.findMany({
         where,
