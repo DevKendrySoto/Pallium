@@ -17,14 +17,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import {
-  useRescheduleVisit,
-  useStartVisitComplete,
-  useVisitOutcome,
-} from '@/features/dashboard/hooks'
+import { useRescheduleVisit, useVisitOutcome } from '@/features/dashboard/hooks'
 import { quickActionsDataSchema } from '@/features/dashboard/types'
 
-type Modal = 'start' | 'absent' | 'outoftime' | 'refused' | 'reschedule' | null
+type Modal = 'absent' | 'outoftime' | 'refused' | 'reschedule' | null
 
 const ACTION_ICON: Record<string, React.ComponentType<{ size?: number }>> = {
   start_visit: Stethoscope,
@@ -35,28 +31,17 @@ const ACTION_ICON: Record<string, React.ComponentType<{ size?: number }>> = {
   reschedule: CalendarClock,
 }
 
-function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea
-      {...props}
-      className="min-h-24 w-full rounded-md border border-slate-200 p-2 text-base focus:outline-none focus:ring-1 focus:ring-primary"
-    />
-  )
-}
-
 export function QuickActionsWidget({ data }: { data: unknown }) {
   const parsed = quickActionsDataSchema.safeParse(data)
   const { selectedVisit, selectVisit } = useDashboardSelection()
   const [modal, setModal] = useState<Modal>(null)
   const [reason, setReason] = useState('')
-  const [note, setNote] = useState('')
   const [newDate, setNewDate] = useState('')
 
   const router = useRouter()
   const outcome = useVisitOutcome()
-  const start = useStartVisitComplete()
   const reschedule = useRescheduleVisit()
-  const pending = outcome.isPending || start.isPending || reschedule.isPending
+  const pending = outcome.isPending || reschedule.isPending
 
   if (!parsed.success) return null
   const actions = parsed.data.actions
@@ -65,7 +50,6 @@ export function QuickActionsWidget({ data }: { data: unknown }) {
   function close() {
     setModal(null)
     setReason('')
-    setNote('')
     setNewDate('')
     selectVisit(null)
   }
@@ -97,17 +81,6 @@ export function QuickActionsWidget({ data }: { data: unknown }) {
     }
   }
 
-  async function saveStartVisit() {
-    if (!selectedVisit || !note.trim()) return
-    try {
-      await start.mutateAsync({ id: selectedVisit.id, note })
-      toast.success('Visita completada')
-      close()
-    } catch {
-      /* manejado por el wrapper */
-    }
-  }
-
   return (
     <>
       <Sheet open={open} onOpenChange={(o) => !o && close()}>
@@ -127,8 +100,11 @@ export function QuickActionsWidget({ data }: { data: unknown }) {
                   className="min-h-[44px] w-full justify-start gap-2"
                   disabled={pending || isCompleted}
                   onClick={() => {
-                    if (action.key === 'start_visit') setModal('start')
-                    else if (action.key === 'apply_scale') {
+                    if (action.key === 'start_visit') {
+                      // Abre la pantalla de la visita: plantilla clínica + escalas.
+                      if (selectedVisit) router.push(`/visitas/${selectedVisit.id}`)
+                      close()
+                    } else if (action.key === 'apply_scale') {
                       if (selectedVisit) router.push(`/patients/${selectedVisit.patient.id}?tab=clinico`)
                       close()
                     } else if (action.key === 'mark_patient_absent') setModal('absent')
@@ -145,28 +121,6 @@ export function QuickActionsWidget({ data }: { data: unknown }) {
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* Drawer "Iniciar visita" — puente al registro clínico. Solo al guardar completa la visita. */}
-      <Dialog open={modal === 'start'} onOpenChange={(o) => !o && setModal(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Registro de enfermería</DialogTitle>
-            <DialogDescription>
-              Registra la nota clínica. La visita se completará al guardar.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-1">
-            <Label>Nota clínica</Label>
-            <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Evolución, hallazgos, indicaciones…" />
-          </div>
-          <DialogFooter>
-            <Button disabled={!note.trim() || start.isPending} onClick={saveStartVisit}>
-              {start.isPending && <Loader2 size={18} className="animate-spin" />}
-              Guardar y completar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <ReasonModal
         open={modal === 'absent'}
