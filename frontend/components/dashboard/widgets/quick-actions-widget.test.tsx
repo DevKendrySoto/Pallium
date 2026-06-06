@@ -7,9 +7,10 @@ import { DashboardSelectionProvider, useDashboardSelection } from '@/components/
 import type { TodayVisitItem } from '@/features/dashboard/types'
 import { QuickActionsWidget } from './quick-actions-widget'
 
+const push = vi.fn()
 vi.mock('@/lib/api', () => ({ api: { post: vi.fn(), patch: vi.fn() } }))
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), warning: vi.fn(), error: vi.fn() } }))
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { api } from '@/lib/api'
@@ -59,14 +60,14 @@ beforeEach(() => {
 afterEach(() => vi.clearAllMocks())
 
 describe('QuickActionsWidget', () => {
-  it('"Iniciar visita" abre el registro clínico y NO completa la visita directamente', async () => {
+  it('"Iniciar visita" abre la pantalla de la visita y NO completa la visita directamente', async () => {
     const user = userEvent.setup()
     render(<Harness qc={new QueryClient()} />)
 
     await user.click(await screen.findByRole('button', { name: 'Iniciar visita' }))
 
-    // Abre el drawer de registro, no llama a ningún endpoint todavía.
-    expect(await screen.findByText('Registro de enfermería')).toBeDefined()
+    // Navega al detalle de la visita (plantilla + escalas); no llama a ningún endpoint.
+    expect(push).toHaveBeenCalledWith('/visitas/v1')
     expect(mockApi.post).not.toHaveBeenCalled()
   })
 
