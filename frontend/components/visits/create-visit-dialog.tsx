@@ -45,7 +45,6 @@ const schema = z
       .optional(),
     modality: z.enum(['HOME', 'CLINIC', 'TELEHEALTH']),
     scheduledDate: z.string().min(1, 'Requerida'),
-    durationMin: z.string().optional(),
   })
   .refine((d) => d.type !== 'EXTRAORDINARY' || Boolean(d.reason), {
     message: 'Selecciona un motivo',
@@ -66,7 +65,6 @@ export function CreateVisitDialog({ defaultDateTime }: { defaultDateTime?: strin
       type: 'REGULAR',
       modality: 'HOME',
       scheduledDate: defaultDateTime ?? '',
-      durationMin: '',
     },
   })
 
@@ -80,12 +78,11 @@ export function CreateVisitDialog({ defaultDateTime }: { defaultDateTime?: strin
         modality: values.modality,
         scheduledDate: new Date(values.scheduledDate).toISOString(),
         ...(values.type === 'EXTRAORDINARY' && values.reason ? { reason: values.reason } : {}),
-        ...(values.durationMin ? { durationMin: Number(values.durationMin) } : {}),
       },
       {
         onSuccess: () => {
           setOpen(false)
-          form.reset({ ...form.getValues(), patientId: '', durationMin: '' })
+          form.reset({ ...form.getValues(), patientId: '' })
         },
       },
     )
@@ -198,34 +195,19 @@ export function CreateVisitDialog({ defaultDateTime }: { defaultDateTime?: strin
               />
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="scheduledDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fecha y hora</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="durationMin"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Duración (min)</FormLabel>
-                    <FormControl>
-                      <Input type="number" min={5} max={480} placeholder="45" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="scheduledDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fecha y hora</FormLabel>
+                  <FormControl>
+                    <Input type="datetime-local" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <DialogFooter>
               <Button type="submit" disabled={createVisit.isPending}>

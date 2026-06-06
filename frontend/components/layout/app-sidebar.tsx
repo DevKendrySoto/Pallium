@@ -48,7 +48,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: 'Clínico',
     items: [
-      { label: 'Registro', href: '#', icon: ClipboardList },
+      { label: 'Registro', href: '/agenda', icon: ClipboardList },
       { label: 'Alertas', href: '/alerts', icon: Bell },
       { label: 'Reportes', href: '#', icon: BarChart3 },
     ],
