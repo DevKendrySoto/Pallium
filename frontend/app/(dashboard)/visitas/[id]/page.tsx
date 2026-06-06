@@ -19,7 +19,6 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { usePatient } from '@/features/patients/hooks'
 import {
   roleToSpecialty,
   useCheckIn,
@@ -52,9 +51,9 @@ export default function VisitPage() {
   const role = useAuthStore((s) => s.role)
   const readOnly = useReadOnly()
   const { data: visit, isLoading, isError } = useVisit(id)
-  const { data: patient } = usePatient(visit?.patientId ?? '')
 
-  const categoryCode = patient?.category?.code
+  // La categoría viene embebida en la visita → la plantilla resuelve sin un fetch extra.
+  const categoryCode = visit?.patient?.category?.code
   const { data: template } = useResolveTemplate(roleToSpecialty(role), categoryCode)
 
   const checkIn = useCheckIn(id)
