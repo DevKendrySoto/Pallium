@@ -8,6 +8,8 @@ export enum WidgetType {
   TODAY_VISITS = 'today_visits',
   ALERTS_LIST = 'alerts_list',
   QUICK_ACTIONS = 'quick_actions',
+  VISITS_TO_CONFIRM = 'visits_to_confirm',
+  ROUTES_TODAY = 'routes_today',
   PLACEHOLDER = 'placeholder',
 }
 
@@ -70,6 +72,35 @@ export interface QuickAction {
 }
 export interface QuickActionsData {
   actions: QuickAction[]
+}
+
+// ---- visits_to_confirm (agenda) ----
+export interface VisitToConfirmItem {
+  id: string
+  patient: { id: string; name: string }
+  scheduledAt: string
+  modality: string
+  type: string
+  status: string
+}
+export interface VisitsToConfirmData {
+  visits: VisitToConfirmItem[]
+  total: number
+}
+
+// ---- routes_today (agenda) ----
+export interface RouteTodayItem {
+  id: string
+  name: string | null
+  status: string
+  driverName: string | null
+  stops: number
+  canDispatch: boolean
+  dispatchedAt: string | null
+}
+export interface RoutesTodayData {
+  routes: RouteTodayItem[]
+  total: number
 }
 
 // ---- placeholder ----

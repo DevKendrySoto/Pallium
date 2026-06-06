@@ -5,7 +5,9 @@ import { AlertsListWidget } from './widgets/alerts-list-widget'
 import { KpiGroupWidget } from './widgets/kpi-group-widget'
 import { PlaceholderWidget } from './widgets/placeholder-widget'
 import { QuickActionsWidget } from './widgets/quick-actions-widget'
+import { RoutesTodayWidget } from './widgets/routes-today-widget'
 import { TodayVisitsWidget } from './widgets/today-visits-widget'
+import { VisitsToConfirmWidget } from './widgets/visits-to-confirm-widget'
 
 type WidgetComponent = (props: { data: unknown }) => React.ReactNode
 
@@ -15,6 +17,8 @@ export const widgetRegistry: Record<string, WidgetComponent> = {
   [WidgetType.TODAY_VISITS]: TodayVisitsWidget,
   [WidgetType.ALERTS_LIST]: AlertsListWidget,
   [WidgetType.QUICK_ACTIONS]: QuickActionsWidget,
+  [WidgetType.VISITS_TO_CONFIRM]: VisitsToConfirmWidget,
+  [WidgetType.ROUTES_TODAY]: RoutesTodayWidget,
   [WidgetType.PLACEHOLDER]: PlaceholderWidget,
 }
 

@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common'
-import { AlertSeverity, AlertStatus, AlertType, type Specialty, VisitStatus } from '@prisma/client'
+import {
+  AlertSeverity,
+  AlertStatus,
+  AlertType,
+  PatientStatus,
+  type Specialty,
+  VisitStatus,
+} from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 
 /** Severidades relevantes para la bandeja (medium o superior). */
@@ -107,6 +114,84 @@ export class DashboardRepository {
         severity: { in: ACTIONABLE_SEVERITIES },
       },
     })
+  }
+
+  // ===== Agenda (bandeja operativa, alcance clínica) =====
+
+  /** Visitas agendadas (sin confirmar) del día. */
+  async agendaScheduledVisits(day: Date, limit: number) {
+    const start = startOfDay(day)
+    const end = addDays(start, 1)
+    const where = { status: VisitStatus.SCHEDULED, scheduledDate: { gte: start, lt: end } }
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.visit.findMany({
+        where,
+        orderBy: { scheduledDate: 'asc' },
+        take: limit,
+        select: {
+          id: true,
+          scheduledDate: true,
+          modality: true,
+          type: true,
+          status: true,
+          patient: { select: { id: true, firstName: true, lastName: true } },
+        },
+      }),
+      this.prisma.visit.count({ where }),
+    ])
+    return { items, total }
+  }
+
+  /** Rutas del día con chofer y número de paradas. */
+  routesToday(day: Date) {
+    const start = startOfDay(day)
+    const end = addDays(start, 1)
+    return this.prisma.route.findMany({
+      where: { routeDate: { gte: start, lt: end } },
+      orderBy: { routeDate: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        driverId: true,
+        dispatchedAt: true,
+        driver: { select: { fullName: true } },
+        _count: { select: { stops: true } },
+      },
+    })
+  }
+
+  /** Pacientes activos con cadencia vencida (próxima visita regular ya pasó). */
+  countOverdueCadence(day: Date): Promise<number> {
+    return this.prisma.patient.count({
+      where: {
+        deletedAt: null,
+        status: PatientStatus.ACTIVE,
+        nextRegularVisitDue: { lt: startOfDay(day) },
+      },
+    })
+  }
+
+  /** Alertas administrativas abiertas (alcance clínica), más recientes primero. */
+  async openAdministrativeAlerts(limit: number) {
+    const where = { type: AlertType.ADMINISTRATIVE, status: AlertStatus.OPEN }
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.alert.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          type: true,
+          severity: true,
+          title: true,
+          createdAt: true,
+          patient: { select: { id: true, firstName: true, lastName: true } },
+        },
+      }),
+      this.prisma.alert.count({ where }),
+    ])
+    return { items, total }
   }
 
   /** Alertas abiertas (medium+) de un conjunto de pacientes, más recientes primero. */
