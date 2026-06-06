@@ -83,3 +83,22 @@ export function useRescheduleVisit() {
     onSuccess: () => invalidate(),
   })
 }
+
+/** Confirma una visita agendada (PATCH /visits/:id/transition → CONFIRMED). */
+export function useConfirmVisit() {
+  const invalidate = useInvalidateDashboard()
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) =>
+      api.patch(`/visits/${id}/transition`, { status: 'CONFIRMED' }),
+    onSuccess: () => invalidate(),
+  })
+}
+
+/** Despacha una ruta al chofer por WhatsApp (POST /routes/:id/dispatch). */
+export function useDispatchRouteFromDashboard() {
+  const invalidate = useInvalidateDashboard()
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.post(`/routes/${id}/dispatch`),
+    onSuccess: () => invalidate(),
+  })
+}

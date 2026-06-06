@@ -7,6 +7,8 @@ export const WidgetType = {
   TODAY_VISITS: 'today_visits',
   ALERTS_LIST: 'alerts_list',
   QUICK_ACTIONS: 'quick_actions',
+  VISITS_TO_CONFIRM: 'visits_to_confirm',
+  ROUTES_TODAY: 'routes_today',
   PLACEHOLDER: 'placeholder',
 } as const
 
@@ -66,6 +68,37 @@ export const quickActionSchema = z.object({ key: z.string(), label: z.string() }
 export type QuickAction = z.infer<typeof quickActionSchema>
 export const quickActionsDataSchema = z.object({ actions: z.array(quickActionSchema) })
 export type QuickActionsData = z.infer<typeof quickActionsDataSchema>
+
+export const visitToConfirmItemSchema = z.object({
+  id: z.string(),
+  patient: z.object({ id: z.string(), name: z.string() }),
+  scheduledAt: z.string(),
+  modality: z.string(),
+  type: z.string(),
+  status: z.string(),
+})
+export type VisitToConfirmItem = z.infer<typeof visitToConfirmItemSchema>
+export const visitsToConfirmDataSchema = z.object({
+  visits: z.array(visitToConfirmItemSchema),
+  total: z.number(),
+})
+export type VisitsToConfirmData = z.infer<typeof visitsToConfirmDataSchema>
+
+export const routeTodayItemSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  status: z.string(),
+  driverName: z.string().nullable(),
+  stops: z.number(),
+  canDispatch: z.boolean(),
+  dispatchedAt: z.string().nullable(),
+})
+export type RouteTodayItem = z.infer<typeof routeTodayItemSchema>
+export const routesTodayDataSchema = z.object({
+  routes: z.array(routeTodayItemSchema),
+  total: z.number(),
+})
+export type RoutesTodayData = z.infer<typeof routesTodayDataSchema>
 
 export const placeholderDataSchema = z.object({ message: z.string() })
 export type PlaceholderData = z.infer<typeof placeholderDataSchema>
