@@ -9,6 +9,8 @@ export const WidgetType = {
   QUICK_ACTIONS: 'quick_actions',
   VISITS_TO_CONFIRM: 'visits_to_confirm',
   ROUTES_TODAY: 'routes_today',
+  PATIENTS_TO_REVIEW: 'patients_to_review',
+  ROUTES_UNASSIGNED: 'routes_unassigned',
   PLACEHOLDER: 'placeholder',
 } as const
 
@@ -99,6 +101,34 @@ export const routesTodayDataSchema = z.object({
   total: z.number(),
 })
 export type RoutesTodayData = z.infer<typeof routesTodayDataSchema>
+
+export const patientToReviewItemSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  mrn: z.string(),
+  refusalCount: z.number(),
+  reason: z.string(),
+})
+export type PatientToReviewItem = z.infer<typeof patientToReviewItemSchema>
+export const patientsToReviewDataSchema = z.object({
+  patients: z.array(patientToReviewItemSchema),
+  total: z.number(),
+})
+export type PatientsToReviewData = z.infer<typeof patientsToReviewDataSchema>
+
+export const routeUnassignedItemSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  stops: z.number(),
+  missingMedical: z.boolean(),
+  missingNursing: z.boolean(),
+})
+export type RouteUnassignedItem = z.infer<typeof routeUnassignedItemSchema>
+export const routesUnassignedDataSchema = z.object({
+  routes: z.array(routeUnassignedItemSchema),
+  total: z.number(),
+})
+export type RoutesUnassignedData = z.infer<typeof routesUnassignedDataSchema>
 
 export const placeholderDataSchema = z.object({ message: z.string() })
 export type PlaceholderData = z.infer<typeof placeholderDataSchema>

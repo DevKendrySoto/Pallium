@@ -10,6 +10,8 @@ export enum WidgetType {
   QUICK_ACTIONS = 'quick_actions',
   VISITS_TO_CONFIRM = 'visits_to_confirm',
   ROUTES_TODAY = 'routes_today',
+  PATIENTS_TO_REVIEW = 'patients_to_review',
+  ROUTES_UNASSIGNED = 'routes_unassigned',
   PLACEHOLDER = 'placeholder',
 }
 
@@ -100,6 +102,32 @@ export interface RouteTodayItem {
 }
 export interface RoutesTodayData {
   routes: RouteTodayItem[]
+  total: number
+}
+
+// ---- patients_to_review (coordinador) ----
+export interface PatientToReviewItem {
+  id: string
+  name: string
+  mrn: string
+  refusalCount: number
+  reason: string
+}
+export interface PatientsToReviewData {
+  patients: PatientToReviewItem[]
+  total: number
+}
+
+// ---- routes_unassigned (coordinador) ----
+export interface RouteUnassignedItem {
+  id: string
+  name: string | null
+  stops: number
+  missingMedical: boolean
+  missingNursing: boolean
+}
+export interface RoutesUnassignedData {
+  routes: RouteUnassignedItem[]
   total: number
 }
 

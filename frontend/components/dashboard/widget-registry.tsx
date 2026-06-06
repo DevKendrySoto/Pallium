@@ -3,9 +3,11 @@
 import { WidgetType, type Widget } from '@/features/dashboard/types'
 import { AlertsListWidget } from './widgets/alerts-list-widget'
 import { KpiGroupWidget } from './widgets/kpi-group-widget'
+import { PatientsToReviewWidget } from './widgets/patients-to-review-widget'
 import { PlaceholderWidget } from './widgets/placeholder-widget'
 import { QuickActionsWidget } from './widgets/quick-actions-widget'
 import { RoutesTodayWidget } from './widgets/routes-today-widget'
+import { RoutesUnassignedWidget } from './widgets/routes-unassigned-widget'
 import { TodayVisitsWidget } from './widgets/today-visits-widget'
 import { VisitsToConfirmWidget } from './widgets/visits-to-confirm-widget'
 
@@ -19,6 +21,8 @@ export const widgetRegistry: Record<string, WidgetComponent> = {
   [WidgetType.QUICK_ACTIONS]: QuickActionsWidget,
   [WidgetType.VISITS_TO_CONFIRM]: VisitsToConfirmWidget,
   [WidgetType.ROUTES_TODAY]: RoutesTodayWidget,
+  [WidgetType.PATIENTS_TO_REVIEW]: PatientsToReviewWidget,
+  [WidgetType.ROUTES_UNASSIGNED]: RoutesUnassignedWidget,
   [WidgetType.PLACEHOLDER]: PlaceholderWidget,
 }
 
