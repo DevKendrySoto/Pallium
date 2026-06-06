@@ -13,7 +13,17 @@ import { computeNextRegularDue } from './domain/cadence'
 
 const visitInclude = {
   assignments: { include: { user: { select: { id: true, fullName: true, specialty: true } } } },
-  patient: { select: { id: true, mrn: true, firstName: true, lastName: true, status: true } },
+  patient: {
+    select: {
+      id: true,
+      mrn: true,
+      firstName: true,
+      lastName: true,
+      status: true,
+      // Categoría incluida para resolver la plantilla clínica sin un fetch extra.
+      category: { select: { code: true, name: true } },
+    },
+  },
   address: true,
 } satisfies Prisma.VisitInclude
 

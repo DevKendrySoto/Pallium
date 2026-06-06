@@ -25,6 +25,7 @@ export interface VisitPatient {
   firstName: string
   lastName: string
   status: string
+  category: { code: string; name: string } | null
 }
 
 export interface VisitAssignment {

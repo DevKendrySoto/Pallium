@@ -42,6 +42,9 @@ export function useResolveTemplate(specialty: string | null, categoryCode?: stri
   return useQuery({
     queryKey: ['clinical-template', specialty, categoryCode],
     enabled: Boolean(categoryCode),
+    // El catálogo de plantillas es casi estático: cachéalo para que no recargue cada vez.
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
     queryFn: async () => {
       const params = new URLSearchParams()
       if (specialty) params.set('specialty', specialty)
