@@ -1,52 +1,65 @@
 'use client'
 
-import { Bell, CalendarCheck, Users } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useDashboardKpis } from '@/features/dashboard'
+import { DashboardSelectionProvider } from '@/components/dashboard/dashboard-context'
+import { LastUpdated } from '@/components/dashboard/last-updated'
+import { DashboardRenderer } from '@/components/dashboard/widget-registry'
+import { AlertsListSkeleton, AlertsListWidget } from '@/components/dashboard/widgets/alerts-list-widget'
+import { KpiGroupSkeleton, KpiGroupWidget } from '@/components/dashboard/widgets/kpi-group-widget'
+import { QuickActionsWidget } from '@/components/dashboard/widgets/quick-actions-widget'
+import { TodayVisitsSkeleton, TodayVisitsWidget } from '@/components/dashboard/widgets/today-visits-widget'
+import { useDashboard } from '@/features/dashboard/hooks'
+import { WidgetType } from '@/features/dashboard/types'
 
 export default function DashboardPage() {
-  const kpis = useDashboardKpis()
+  const { data, isLoading, isError, dataUpdatedAt, isFetching } = useDashboard()
 
-  const cards = [
-    { label: 'Pacientes activos', value: kpis.activePatients, icon: Users },
-    { label: 'Visitas hoy', value: kpis.visitsToday, icon: CalendarCheck },
-    { label: 'Alertas abiertas', value: kpis.openAlerts, icon: Bell },
-  ]
+  const widgetData = (type: string) => data?.widgets.find((w) => w.type === type)?.data
+  const isNurse = Boolean(data?.widgets.some((w) => w.type === WidgetType.TODAY_VISITS))
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Bienvenido</h1>
-        <p className="text-sm text-muted-foreground">
-          Resumen general de la operación de la clínica.
-        </p>
-      </div>
+    <DashboardSelectionProvider>
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Mi jornada</h1>
+            <p className="text-sm text-muted-foreground">Tu bandeja de trabajo de hoy.</p>
+          </div>
+          {data && <LastUpdated updatedAt={dataUpdatedAt} fetching={isFetching} />}
+        </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {cards.map((kpi) => {
-          const Icon = kpi.icon
-          return (
-            <Card key={kpi.label} className="border-slate-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {kpi.label}
-                </CardTitle>
-                <Icon size={18} className="text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {kpis.isLoading ? (
-                  <Skeleton className="h-9 w-16" />
-                ) : (
-                  <div className="text-3xl font-semibold tracking-tight">
-                    {kpis.isError ? '—' : (kpi.value ?? 0)}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )
-        })}
+        {isLoading && (
+          <div className="space-y-4">
+            <KpiGroupSkeleton />
+            <div className="grid gap-4 lg:grid-cols-5">
+              <div className="lg:col-span-3">
+                <TodayVisitsSkeleton />
+              </div>
+              <div className="lg:col-span-2">
+                <AlertsListSkeleton />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isError && <p className="text-sm text-danger">No se pudo cargar el dashboard.</p>}
+
+        {data && isNurse && (
+          <>
+            <KpiGroupWidget data={widgetData(WidgetType.KPI_GROUP)} />
+            <div className="grid gap-4 lg:grid-cols-5">
+              <div className="lg:col-span-3">
+                <TodayVisitsWidget data={widgetData(WidgetType.TODAY_VISITS)} />
+              </div>
+              <div className="lg:col-span-2">
+                <AlertsListWidget data={widgetData(WidgetType.ALERTS_LIST)} />
+              </div>
+            </div>
+            <QuickActionsWidget data={widgetData(WidgetType.QUICK_ACTIONS)} />
+          </>
+        )}
+
+        {data && !isNurse && <DashboardRenderer widgets={data.widgets} />}
       </div>
-    </div>
+    </DashboardSelectionProvider>
   )
 }
