@@ -8,6 +8,7 @@ import { CadenceModule } from './cadence/cadence.module'
 import { CategoriesModule } from './categories/categories.module'
 import { ClinicalModule } from './clinical/clinical.module'
 import { AdminModule } from './admin/admin.module'
+import { AppointmentsModule } from './appointments/appointments.module'
 import { ClinicalTemplatesModule } from './clinical-templates/clinical-templates.module'
 import { DashboardModule } from './dashboard/dashboard.module'
 import { UserRequestsModule } from './user-requests/user-requests.module'
@@ -55,6 +56,7 @@ import { VisitsModule } from './visits/visits.module'
     DashboardModule,
     UserRequestsModule,
     AdminModule,
+    AppointmentsModule,
   ],
   controllers: [HealthController],
   providers: [
