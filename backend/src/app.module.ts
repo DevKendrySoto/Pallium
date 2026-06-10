@@ -7,8 +7,10 @@ import { AuthModule } from './auth/auth.module'
 import { CadenceModule } from './cadence/cadence.module'
 import { CategoriesModule } from './categories/categories.module'
 import { ClinicalModule } from './clinical/clinical.module'
+import { AdminModule } from './admin/admin.module'
 import { ClinicalTemplatesModule } from './clinical-templates/clinical-templates.module'
 import { DashboardModule } from './dashboard/dashboard.module'
+import { UserRequestsModule } from './user-requests/user-requests.module'
 import { AuditInterceptor } from './common/interceptors/audit.interceptor'
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard'
 import { PermissionsGuard } from './common/guards/permissions.guard'
@@ -51,6 +53,8 @@ import { VisitsModule } from './visits/visits.module'
     ProfileModule,
     AuditModule,
     DashboardModule,
+    UserRequestsModule,
+    AdminModule,
   ],
   controllers: [HealthController],
   providers: [

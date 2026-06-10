@@ -6,6 +6,24 @@ function permsOf(code: string): Set<string> {
   return new Set(r.permissions === '*' ? ALL : r.permissions)
 }
 
+describe('RBAC: permisos de administración (Fase 1 admin)', () => {
+  it('user:request lo tienen ADMIN y COORDINADOR_MEDICO', () => {
+    expect(permsOf('ADMIN').has('user:request')).toBe(true)
+    expect(permsOf('COORDINADOR_MEDICO').has('user:request')).toBe(true)
+  })
+
+  it('admin:operate es exclusivo de ADMIN', () => {
+    const holders = ROLES.filter((r) => (r.permissions === '*' ? ALL : r.permissions).includes('admin:operate')).map(
+      (r) => r.code,
+    )
+    expect(holders).toEqual(['ADMIN'])
+  })
+
+  it('el coordinador NO puede aprobar (sin admin:operate)', () => {
+    expect(permsOf('COORDINADOR_MEDICO').has('admin:operate')).toBe(false)
+  })
+})
+
 describe('RBAC: reorganización Coordinador médico', () => {
   it('el catálogo incluye los nuevos permisos y ya no incluye patient:approve', () => {
     expect(PERMISSIONS['patient:create']).toBeDefined()

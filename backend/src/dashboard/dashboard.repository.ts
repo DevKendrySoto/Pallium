@@ -3,9 +3,11 @@ import {
   AlertSeverity,
   AlertStatus,
   AlertType,
+  DispatchStatus,
   PatientStatus,
   RouteStatus,
   type Specialty,
+  UserRequestStatus,
   VisitStatus,
 } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
@@ -273,6 +275,142 @@ export class DashboardRepository {
         },
       }),
       this.prisma.alert.count({ where }),
+    ])
+    return { items, total }
+  }
+
+  // ===== Admin (operación de toda la clínica) =====
+
+  countActivePatients(): Promise<number> {
+    return this.prisma.patient.count({
+      where: { deletedAt: null, status: PatientStatus.ACTIVE },
+    })
+  }
+
+  countVisitsToday(day: Date): Promise<number> {
+    const start = startOfDay(day)
+    return this.prisma.visit.count({
+      where: { scheduledDate: { gte: start, lt: addDays(start, 1) } },
+    })
+  }
+
+  /** Defunciones del mes actual (por fecha de deceso). */
+  countDeathsThisMonth(day: Date): Promise<number> {
+    const start = new Date(day.getFullYear(), day.getMonth(), 1)
+    return this.prisma.patient.count({
+      where: { deletedAt: null, deceasedAt: { gte: start } },
+    })
+  }
+
+  /** Pacientes fallecidos en los últimos 30 días sin cierre administrativo. */
+  async pendingAdminClosures(day: Date, limit: number) {
+    const since = addDays(startOfDay(day), -30)
+    const where = {
+      deletedAt: null,
+      status: PatientStatus.DECEASED,
+      administrativeClosureAt: null,
+      deceasedAt: { gte: since },
+    }
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.patient.findMany({
+        where,
+        orderBy: { deceasedAt: 'asc' },
+        take: limit,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          deceasedAt: true,
+          _count: { select: { clinicalRecords: true } },
+          statusHistory: {
+            where: { toStatus: PatientStatus.DECEASED },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { changedBy: { select: { fullName: true } } },
+          },
+        },
+      }),
+      this.prisma.patient.count({ where }),
+    ])
+    return { items, total }
+  }
+
+  /** Solicitudes de usuario pendientes, más antiguas primero. */
+  async pendingUserRequests(limit: number) {
+    const where = { status: UserRequestStatus.PENDING }
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.userRequest.findMany({
+        where,
+        orderBy: { createdAt: 'asc' },
+        take: limit,
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          roleCode: true,
+          reason: true,
+          createdAt: true,
+          requestedBy: { select: { fullName: true } },
+        },
+      }),
+      this.prisma.userRequest.count({ where }),
+    ])
+    return { items, total }
+  }
+
+  /**
+   * Alertas escaladas: high/critical abiertas que superaron su SLA
+   * (24h high, 4h critical). Las más antiguas primero.
+   */
+  async escalatedAlerts(now: Date, limit: number) {
+    const highBefore = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    const criticalBefore = new Date(now.getTime() - 4 * 60 * 60 * 1000)
+    const where = {
+      status: AlertStatus.OPEN,
+      OR: [
+        { severity: AlertSeverity.HIGH, createdAt: { lt: highBefore } },
+        { severity: AlertSeverity.CRITICAL, createdAt: { lt: criticalBefore } },
+      ],
+    }
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.alert.findMany({
+        where,
+        orderBy: { createdAt: 'asc' },
+        take: limit,
+        select: {
+          id: true,
+          type: true,
+          severity: true,
+          title: true,
+          createdAt: true,
+          patient: { select: { id: true, firstName: true, lastName: true } },
+          acknowledgedBy: { select: { fullName: true } },
+        },
+      }),
+      this.prisma.alert.count({ where }),
+    ])
+    return { items, total }
+  }
+
+  /** Despachos de ruta fallidos y no descartados (proxy de notificaciones fallidas). */
+  async failedNotifications(limit: number) {
+    const where = { status: DispatchStatus.FAILED, discardedAt: null }
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.routeDispatch.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          channel: true,
+          toPhone: true,
+          error: true,
+          createdAt: true,
+          routeId: true,
+          route: { select: { name: true } },
+        },
+      }),
+      this.prisma.routeDispatch.count({ where }),
     ])
     return { items, total }
   }

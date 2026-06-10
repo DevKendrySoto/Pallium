@@ -219,6 +219,8 @@ model User {
   /// Especialidad principal del profesional (null para Admin/Agenda/Auditor).
   specialty    Specialty?
   isActive     Boolean    @default(true) @map("is_active")
+  /// Obliga a cambiar la contraseña en el próximo login (usuarios creados por aprobación).
+  mustChangePassword Boolean @default(false) @map("must_change_password")
   lastLoginAt  DateTime?  @map("last_login_at")
 
   createdAt DateTime  @default(now()) @map("created_at")
@@ -247,6 +249,9 @@ model User {
   dispatchedRoutes   Route[]                @relation("RouteDispatcher")
   medicalRoutes      Route[]                @relation("RouteMedical")
   nursingRoutes      Route[]                @relation("RouteNursing")
+  adminClosedPatients Patient[]             @relation("PatientAdminCloser")
+  requestedUsers     UserRequest[]          @relation("UserRequestRequester")
+  reviewedUserRequests UserRequest[]        @relation("UserRequestReviewer")
 
   @@index([specialty])
   @@map("users")
@@ -321,6 +326,36 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+enum UserRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/// Solicitud de alta de usuario (la crea el coordinador; la aprueba/rechaza el admin).
+model UserRequest {
+  id            String            @id @default(cuid())
+  requestedById String            @map("requested_by_id")
+  requestedBy   User              @relation("UserRequestRequester", fields: [requestedById], references: [id])
+  fullName      String            @map("full_name")
+  email         String
+  roleCode      String            @map("role_code")
+  reason        String?
+  status        UserRequestStatus @default(PENDING)
+
+  reviewedById    String?   @map("reviewed_by_id")
+  reviewedBy      User?     @relation("UserRequestReviewer", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime? @map("reviewed_at")
+  rejectionReason String?   @map("rejection_reason")
+  /// Usuario creado al aprobar (si aplica).
+  createdUserId   String?   @map("created_user_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([status])
+  @@map("user_requests")
+}
+
 // ============================================================================
 //  PACIENTE Y ENTORNO
 // ============================================================================
@@ -371,6 +406,12 @@ model Patient {
   deceasedAt DateTime? @map("deceased_at")
   deathDate  DateTime? @map("death_date")
   deathPlace String?   @map("death_place")
+
+  // Cierre administrativo (revisión del admin tras un deceso).
+  administrativeClosureAt    DateTime? @map("administrative_closure_at")
+  administrativeClosedById   String?   @map("administrative_closed_by_id")
+  administrativeClosedBy     User?     @relation("PatientAdminCloser", fields: [administrativeClosedById], references: [id])
+  administrativeClosureNotes String?   @map("administrative_closure_notes")
 
   // Cadencia: próxima visita regular calculada (cada 30 días desde la última).
   lastRegularVisitAt  DateTime? @map("last_regular_visit_at")
@@ -632,6 +673,8 @@ model RouteDispatch {
   providerMessageId String?         @map("provider_message_id")
   error             String?
   sentAt            DateTime?       @map("sent_at")
+  /// El admin descartó este despacho fallido (no requiere reintento).
+  discardedAt       DateTime?       @map("discarded_at")
   createdAt         DateTime        @default(now()) @map("created_at")
 
   @@index([routeId])

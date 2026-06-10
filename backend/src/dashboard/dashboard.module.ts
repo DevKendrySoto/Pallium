@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common'
 import { DashboardController } from './dashboard.controller'
 import { DashboardRepository } from './dashboard.repository'
 import { DashboardService } from './dashboard.service'
+import { AdminDashboardStrategy } from './strategies/admin-dashboard.strategy'
 import { AgendaDashboardStrategy } from './strategies/agenda-dashboard.strategy'
 import { CoordinatorDashboardStrategy } from './strategies/coordinator-dashboard.strategy'
 import { DashboardStrategyFactory } from './strategies/dashboard-strategy.factory'
@@ -19,6 +20,7 @@ import { PlaceholderDashboardStrategy } from './strategies/placeholder-dashboard
     MedicoDashboardStrategy,
     AgendaDashboardStrategy,
     CoordinatorDashboardStrategy,
+    AdminDashboardStrategy,
     PlaceholderDashboardStrategy,
   ],
 })

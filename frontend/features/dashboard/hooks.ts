@@ -34,6 +34,66 @@ function useInvalidateDashboard() {
   return () => qc.invalidateQueries({ queryKey: dashboardKeys.me })
 }
 
+// ===== Acciones del admin (Fase 1) =====
+
+export interface ApproveUserRequestResult {
+  userId: string
+  email: string
+  temporaryPassword: string
+  mustChangePassword: boolean
+}
+
+export function useApproveUserRequest() {
+  const invalidate = useInvalidateDashboard()
+  return useMutation({
+    mutationFn: ({ id, roleCode }: { id: string; roleCode?: string }) =>
+      api.patch<ApproveUserRequestResult>(`/v1/user-requests/${id}/approve`, { roleCode }),
+    onSuccess: () => invalidate(),
+  })
+}
+
+export function useRejectUserRequest() {
+  const invalidate = useInvalidateDashboard()
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api.patch(`/v1/user-requests/${id}/reject`, { reason }),
+    onSuccess: () => invalidate(),
+  })
+}
+
+export function useMarkAdminClosure() {
+  const invalidate = useInvalidateDashboard()
+  return useMutation({
+    mutationFn: ({ patientId, notes }: { patientId: string; notes?: string }) =>
+      api.post(`/v1/admin/patients/${patientId}/administrative-closure`, { notes }),
+    onSuccess: () => invalidate(),
+  })
+}
+
+export function useRetryNotification() {
+  const invalidate = useInvalidateDashboard()
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.post(`/v1/notifications/${id}/retry`),
+    onSuccess: () => invalidate(),
+  })
+}
+
+export function useDiscardNotification() {
+  const invalidate = useInvalidateDashboard()
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.post(`/v1/notifications/${id}/discard`),
+    onSuccess: () => invalidate(),
+  })
+}
+
+export function useResolveAlert() {
+  const invalidate = useInvalidateDashboard()
+  return useMutation({
+    mutationFn: ({ id }: { id: string }) => api.patch(`/alerts/${id}/resolve`),
+    onSuccess: () => invalidate(),
+  })
+}
+
 /** Registra el resultado de una visita (POST /v1/visits/:id/outcome). */
 export function useVisitOutcome() {
   const invalidate = useInvalidateDashboard()

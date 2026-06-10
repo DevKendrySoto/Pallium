@@ -3,7 +3,11 @@
 import { WidgetType, type Widget } from '@/features/dashboard/types'
 import { AlertsListWidget } from './widgets/alerts-list-widget'
 import { KpiGroupWidget } from './widgets/kpi-group-widget'
+import { EscalatedAlertsWidget } from './widgets/escalated-alerts-widget'
+import { FailedNotificationsWidget } from './widgets/failed-notifications-widget'
 import { PatientsToReviewWidget } from './widgets/patients-to-review-widget'
+import { PendingAdminClosuresWidget } from './widgets/pending-admin-closures-widget'
+import { PendingUserRequestsWidget } from './widgets/pending-user-requests-widget'
 import { PlaceholderWidget } from './widgets/placeholder-widget'
 import { QuickActionsWidget } from './widgets/quick-actions-widget'
 import { RoutesTodayWidget } from './widgets/routes-today-widget'
@@ -23,6 +27,10 @@ export const widgetRegistry: Record<string, WidgetComponent> = {
   [WidgetType.ROUTES_TODAY]: RoutesTodayWidget,
   [WidgetType.PATIENTS_TO_REVIEW]: PatientsToReviewWidget,
   [WidgetType.ROUTES_UNASSIGNED]: RoutesUnassignedWidget,
+  [WidgetType.PENDING_ADMIN_CLOSURES]: PendingAdminClosuresWidget,
+  [WidgetType.PENDING_USER_REQUESTS]: PendingUserRequestsWidget,
+  [WidgetType.ESCALATED_ALERTS]: EscalatedAlertsWidget,
+  [WidgetType.FAILED_NOTIFICATIONS]: FailedNotificationsWidget,
   [WidgetType.PLACEHOLDER]: PlaceholderWidget,
 }
 

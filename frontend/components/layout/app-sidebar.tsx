@@ -4,12 +4,17 @@ import {
   Activity,
   BarChart3,
   Bell,
+  BellRing,
   Calendar,
   ClipboardList,
+  Database,
+  FileText,
   LayoutDashboard,
+  ListChecks,
   Route,
   ScrollText,
-  Settings,
+  ServerCog,
+  SlidersHorizontal,
   UserCog,
   Users,
 } from 'lucide-react'
@@ -50,15 +55,25 @@ const NAV: { group: string; items: NavItem[] }[] = [
     items: [
       { label: 'Registro', href: '#', icon: ClipboardList },
       { label: 'Alertas', href: '/alerts', icon: Bell },
-      { label: 'Reportes', href: '#', icon: BarChart3 },
+      { label: 'Reportes', href: '/admin/reportes', icon: BarChart3 },
     ],
   },
   {
     group: 'Administración',
     items: [
-      { label: 'Usuarios', href: '/usuarios', icon: UserCog, permission: 'user:read' },
+      { label: 'Usuarios y roles', href: '/usuarios', icon: UserCog, permission: 'user:read' },
       { label: 'Auditoría', href: '/auditoria', icon: ScrollText, permission: 'audit:read' },
-      { label: 'Configuración', href: '#', icon: Settings },
+      { label: 'Estado del sistema', href: '/admin/estado', icon: ServerCog, permission: 'admin:operate' },
+    ],
+  },
+  {
+    group: 'Configuración',
+    items: [
+      { label: 'Catálogos', href: '/admin/catalogos', icon: Database, permission: 'admin:operate' },
+      { label: 'Plantillas clínicas', href: '/admin/plantillas', icon: FileText, permission: 'admin:operate' },
+      { label: 'Escalas', href: '/admin/escalas', icon: SlidersHorizontal, permission: 'admin:operate' },
+      { label: 'Reglas de alertas', href: '/admin/reglas-alertas', icon: ListChecks, permission: 'admin:operate' },
+      { label: 'Notificaciones', href: '/admin/notificaciones', icon: BellRing, permission: 'admin:operate' },
     ],
   },
 ]

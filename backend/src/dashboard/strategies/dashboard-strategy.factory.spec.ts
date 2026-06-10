@@ -5,8 +5,9 @@ describe('DashboardStrategyFactory', () => {
   const medico: any = { build: jest.fn() }
   const agenda: any = { build: jest.fn() }
   const coordinator: any = { build: jest.fn() }
+  const admin: any = { build: jest.fn() }
   const placeholder: any = { build: jest.fn() }
-  const factory = new DashboardStrategyFactory(nurse, medico, agenda, coordinator, placeholder)
+  const factory = new DashboardStrategyFactory(nurse, medico, agenda, coordinator, admin, placeholder)
 
   it('resuelve la estrategia de enfermería para el rol ENFERMERIA', () => {
     expect(factory.resolve({ roles: ['ENFERMERIA'] } as any)).toBe(nurse)
@@ -24,8 +25,11 @@ describe('DashboardStrategyFactory', () => {
     expect(factory.resolve({ roles: ['COORDINADOR_MEDICO'] } as any)).toBe(coordinator)
   })
 
+  it('resuelve la estrategia de admin para el rol ADMIN', () => {
+    expect(factory.resolve({ roles: ['ADMIN'] } as any)).toBe(admin)
+  })
+
   it('cae al placeholder para otros roles', () => {
-    expect(factory.resolve({ roles: ['ADMIN'] } as any)).toBe(placeholder)
     expect(factory.resolve({ roles: ['AUDITOR'] } as any)).toBe(placeholder)
     expect(factory.resolve({ roles: [] } as any)).toBe(placeholder)
   })
