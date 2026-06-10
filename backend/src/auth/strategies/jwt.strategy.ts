@@ -27,6 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       roles: payload.roles ?? [],
       permissions: payload.permissions ?? [],
       isReadOnly: payload.isReadOnly ?? false,
+      mustChangePassword: payload.mustChangePassword ?? false,
     }
   }
 }

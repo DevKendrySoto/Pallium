@@ -6,4 +6,6 @@ export interface AuthenticatedUser {
   permissions: string[] // permisos efectivos (recurso:acción)
   /** true si TODOS sus roles son de solo lectura (p. ej. Auditor). */
   isReadOnly: boolean
+  /** true si debe cambiar la contraseña antes de operar. */
+  mustChangePassword: boolean
 }
