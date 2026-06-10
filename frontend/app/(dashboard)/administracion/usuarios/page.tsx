@@ -52,7 +52,8 @@ function lastLoginBucket(iso: string | null): string {
 }
 function toggle(s: Set<string>, v: string) {
   const n = new Set(s)
-  n.has(v) ? n.delete(v) : n.add(v)
+  if (n.has(v)) n.delete(v)
+  else n.add(v)
   return n
 }
 
