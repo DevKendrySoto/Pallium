@@ -23,12 +23,6 @@ const SECTIONS: Record<string, { title: string; phase: number; description: stri
     description:
       'Editor de plantillas clínicas por rol y categoría de paciente: secciones, componentes y versiones del registro clínico dinámico.',
   },
-  escalas: {
-    title: 'Escalas',
-    phase: 6,
-    description:
-      'Catálogo de escalas de valoración (funcionales, pronósticas, de síntomas): definición de ítems, puntajes y reglas de alerta.',
-  },
   'reglas-alertas': {
     title: 'Reglas de alertas',
     phase: 3,
