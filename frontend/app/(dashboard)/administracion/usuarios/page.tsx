@@ -1,28 +1,17 @@
 'use client'
 
-import { Loader2, Plus, Search } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { RoleBadge } from '@/components/users/role-badge'
 import { UserAvatar } from '@/components/users/user-avatar'
-import { CopyToClipboard } from '@/components/users/copy-to-clipboard'
-import { PasswordStrengthMeter, passwordScore } from '@/components/users/password-strength-meter'
 import { roleMeta } from '@/components/users/role-meta'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { useActivateUser, useCreateUser, useRoles, useUsers } from '@/features/users'
+import { useActivateUser, useUsers } from '@/features/users'
 import { cn } from '@/lib/utils'
 
 const PAGE_SIZE = 10
@@ -65,7 +54,6 @@ export default function UsersListPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [loginFilter, setLoginFilter] = useState<Set<string>>(new Set())
   const [page, setPage] = useState(1)
-  const [createOpen, setCreateOpen] = useState(false)
   const activate = useActivateUser()
 
   useEffect(() => {
@@ -95,7 +83,7 @@ export default function UsersListPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Usuarios y roles</h1>
           <p className="text-sm text-muted-foreground">Gestión del personal del sistema.</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}><Plus size={18} /> Nuevo usuario</Button>
+        <Button asChild><Link href="/administracion/usuarios/nuevo"><Plus size={18} /> Nuevo usuario</Link></Button>
       </div>
 
       <div className="space-y-2 rounded-lg border border-slate-200 p-3">
@@ -190,93 +178,6 @@ export default function UsersListPage() {
         </div>
       </div>
 
-      <CreateUserDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
-  )
-}
-
-function genTempPassword(): string {
-  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789'
-  let s = ''
-  for (let i = 0; i < 8; i++) s += chars[Math.floor(Math.random() * chars.length)]
-  return `P${s}#7`
-}
-
-function CreateUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const roles = useRoles()
-  const create = useCreateUser()
-  const [email, setEmail] = useState('')
-  const [fullName, setFullName] = useState('')
-  const [roleCode, setRoleCode] = useState('')
-  const [password, setPassword] = useState(genTempPassword())
-  const [created, setCreated] = useState<{ email: string; password: string } | null>(null)
-
-  const valid = email && fullName.length >= 3 && roleCode && passwordScore(password).score === 4
-
-  function submit() {
-    if (!valid) return
-    create.mutate(
-      { email, fullName, password, roleCodes: [roleCode] },
-      {
-        onSuccess: () => {
-          setCreated({ email, password })
-          setEmail(''); setFullName(''); setRoleCode(''); setPassword(genTempPassword())
-        },
-      },
-    )
-  }
-
-  return (
-    <>
-      <Dialog open={open && !created} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nuevo usuario</DialogTitle>
-            <DialogDescription>Crea una cuenta y asigna su rol.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1"><Label>Nombre completo</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
-            <div className="space-y-1"><Label>Correo</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <div className="space-y-1">
-              <Label>Rol</Label>
-              <select value={roleCode} onChange={(e) => setRoleCode(e.target.value)} className="h-9 w-full rounded-md border border-slate-200 px-2 text-sm">
-                <option value="">Selecciona un rol</option>
-                {roles.data?.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <Label>Contraseña temporal</Label>
-                <Button variant="ghost" size="sm" onClick={() => setPassword(genTempPassword())}>Generar otra</Button>
-              </div>
-              <Input value={password} onChange={(e) => setPassword(e.target.value)} />
-              <PasswordStrengthMeter value={password} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button disabled={!valid || create.isPending} onClick={submit}>
-              {create.isPending && <Loader2 size={18} className="animate-spin" />} Crear
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={created !== null} onOpenChange={(o) => { if (!o) { setCreated(null); onOpenChange(false) } }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Credenciales del usuario</DialogTitle>
-            <DialogDescription>Estas credenciales no se mostrarán de nuevo. Compártalas por canal seguro.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2 rounded-md border border-slate-200 p-3 text-sm">
-            <p><span className="text-muted-foreground">Correo:</span> {created?.email}</p>
-            <p><span className="text-muted-foreground">Contraseña:</span> <span className="font-mono">{created?.password}</span></p>
-            <CopyToClipboard value={`${created?.email}\n${created?.password}`} label="Copiar todo" />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setCreated(null); onOpenChange(false) }}>Listo</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
   )
 }
