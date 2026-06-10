@@ -42,6 +42,7 @@ export class AuthService {
       roles: ctx.roles,
       permissions: ctx.permissions,
       isReadOnly: ctx.isReadOnly,
+      mustChangePassword: ctx.mustChangePassword,
     }
     const refreshPayload: RefreshPayload = { sub: ctx.id }
 

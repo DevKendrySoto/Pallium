@@ -35,6 +35,7 @@ export class UsersService {
       roles,
       permissions: [...permissions],
       isReadOnly,
+      mustChangePassword: user.mustChangePassword,
     }
   }
 }
