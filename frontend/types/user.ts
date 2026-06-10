@@ -16,6 +16,43 @@ export interface ManagedUser {
   roles: { code: string; name: string }[]
 }
 
+export interface UserDetail {
+  id: string
+  email: string
+  fullName: string
+  phone: string | null
+  specialty: string | null
+  isActive: boolean
+  mustChangePassword: boolean
+  passwordChangedAt: string | null
+  lastLoginAt: string | null
+  deactivatedAt: string | null
+  deactivationReason: string | null
+  createdAt: string
+  updatedAt: string
+  roles: { code: string; name: string }[]
+  _count: { refreshTokens: number }
+}
+
+export interface UserSession {
+  id: string
+  ip: string | null
+  userAgent: string | null
+  createdAt: string
+  lastActivityAt: string | null
+  revokedAt: string | null
+  active: boolean
+}
+
+export interface UserActivityItem {
+  id: string
+  action: string
+  entityType: string
+  entityId: string | null
+  createdAt: string
+  ipAddress: string | null
+}
+
 export interface AuditEntry {
   id: string
   action: string

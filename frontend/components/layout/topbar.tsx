@@ -42,6 +42,10 @@ export function Topbar() {
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel>Mi cuenta</DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push('/perfil')}>
+              <User size={18} />
+              Mi perfil
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut size={18} />
               Cerrar sesión
