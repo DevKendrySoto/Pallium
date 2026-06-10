@@ -1,9 +1,11 @@
 'use client'
 
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, KeyRound, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useState } from 'react'
+import { DeactivateWizard } from '@/components/users/deactivate-wizard'
+import { ResetPasswordDialog } from '@/components/users/reset-password-dialog'
 import { RoleBadge } from '@/components/users/role-badge'
 import { SessionList } from '@/components/users/session-list'
 import { UserAvatar } from '@/components/users/user-avatar'
@@ -50,6 +52,8 @@ export default function UserDetailPage() {
   const { data: user, isLoading } = useUserDetail(id)
   const activate = useActivateUser()
   const [editOpen, setEditOpen] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [deactivateOpen, setDeactivateOpen] = useState(false)
 
   if (isLoading || !user) {
     return <Skeleton className="h-64 w-full" />
@@ -78,8 +82,13 @@ export default function UserDetailPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setEditOpen(true)}>Editar</Button>
+          {user.isActive && (
+            <Button variant="outline" onClick={() => setResetOpen(true)}>
+              <KeyRound size={16} /> Restablecer contraseña
+            </Button>
+          )}
           {user.isActive ? (
-            <Button variant="outline" disabled title="El asistente de desactivación llega en la siguiente entrega">Desactivar</Button>
+            <Button variant="destructive" onClick={() => setDeactivateOpen(true)}>Desactivar</Button>
           ) : (
             <Button variant="outline" disabled={activate.isPending} onClick={() => activate.mutate(id)}>Reactivar</Button>
           )}
@@ -123,6 +132,8 @@ export default function UserDetailPage() {
         initialName={user.fullName}
         initialRole={user.roles[0]?.code ?? ''}
       />
+      <ResetPasswordDialog open={resetOpen} onOpenChange={setResetOpen} userId={id} userName={user.fullName} />
+      <DeactivateWizard open={deactivateOpen} onOpenChange={setDeactivateOpen} user={user} />
     </div>
   )
 }
