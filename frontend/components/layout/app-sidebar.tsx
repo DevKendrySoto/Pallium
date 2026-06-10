@@ -63,7 +63,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: 'Administración',
     items: [
-      { label: 'Usuarios y roles', href: '/usuarios', icon: UserCog, permission: 'user:read' },
+      { label: 'Usuarios y roles', href: '/administracion/usuarios', icon: UserCog, permission: 'user:read' },
       { label: 'Auditoría', href: '/auditoria', icon: ScrollText, permission: 'audit:read' },
       { label: 'Estado del sistema', href: '/admin/estado', icon: ServerCog, permission: 'admin:operate' },
     ],

@@ -36,6 +36,11 @@ export class UsersAdminController {
     return this.users.listSessions(userId)
   }
 
+  @Delete('me/sessions/:sessionId')
+  revokeMySession(@Param('sessionId') sessionId: string, @CurrentUser('id') userId: string) {
+    return this.users.revokeSession(userId, sessionId)
+  }
+
   @Delete('me/sessions')
   revokeMySessions(@CurrentUser('id') userId: string) {
     return this.users.revokeAllSessions(userId)
