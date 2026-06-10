@@ -11,6 +11,10 @@ export const WidgetType = {
   ROUTES_TODAY: 'routes_today',
   PATIENTS_TO_REVIEW: 'patients_to_review',
   ROUTES_UNASSIGNED: 'routes_unassigned',
+  PENDING_ADMIN_CLOSURES: 'pending_admin_closures',
+  PENDING_USER_REQUESTS: 'pending_user_requests',
+  ESCALATED_ALERTS: 'escalated_alerts',
+  FAILED_NOTIFICATIONS: 'failed_notifications',
   PLACEHOLDER: 'placeholder',
 } as const
 
@@ -129,6 +133,70 @@ export const routesUnassignedDataSchema = z.object({
   total: z.number(),
 })
 export type RoutesUnassignedData = z.infer<typeof routesUnassignedDataSchema>
+
+// ---- admin widgets ----
+export const pendingAdminClosureItemSchema = z.object({
+  patient: z.object({ id: z.string(), fullName: z.string() }),
+  deceasedAt: z.string().nullable(),
+  deceasedBy: z.string().nullable(),
+  daysPending: z.number(),
+  hasClinicalClosure: z.boolean(),
+})
+export type PendingAdminClosureItem = z.infer<typeof pendingAdminClosureItemSchema>
+export const pendingAdminClosuresDataSchema = z.object({
+  items: z.array(pendingAdminClosureItemSchema),
+  total: z.number(),
+})
+export type PendingAdminClosuresData = z.infer<typeof pendingAdminClosuresDataSchema>
+
+export const pendingUserRequestItemSchema = z.object({
+  id: z.string(),
+  fullName: z.string(),
+  email: z.string(),
+  roleCode: z.string(),
+  reason: z.string().nullable(),
+  requestedBy: z.string(),
+  createdAt: z.string(),
+})
+export type PendingUserRequestItem = z.infer<typeof pendingUserRequestItemSchema>
+export const pendingUserRequestsDataSchema = z.object({
+  items: z.array(pendingUserRequestItemSchema),
+  total: z.number(),
+})
+export type PendingUserRequestsData = z.infer<typeof pendingUserRequestsDataSchema>
+
+export const escalatedAlertItemSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  severity: widgetSeveritySchema,
+  title: z.string(),
+  patient: z.object({ id: z.string(), name: z.string() }),
+  triggeredAt: z.string(),
+  hoursOpen: z.number(),
+  assignedTo: z.string().nullable(),
+})
+export type EscalatedAlertItem = z.infer<typeof escalatedAlertItemSchema>
+export const escalatedAlertsDataSchema = z.object({
+  items: z.array(escalatedAlertItemSchema),
+  total: z.number(),
+})
+export type EscalatedAlertsData = z.infer<typeof escalatedAlertsDataSchema>
+
+export const failedNotificationItemSchema = z.object({
+  id: z.string(),
+  channel: z.string(),
+  recipient: z.string(),
+  lastError: z.string().nullable(),
+  failedAt: z.string(),
+  routeId: z.string(),
+  routeName: z.string().nullable(),
+})
+export type FailedNotificationItem = z.infer<typeof failedNotificationItemSchema>
+export const failedNotificationsDataSchema = z.object({
+  items: z.array(failedNotificationItemSchema),
+  total: z.number(),
+})
+export type FailedNotificationsData = z.infer<typeof failedNotificationsDataSchema>
 
 export const placeholderDataSchema = z.object({ message: z.string() })
 export type PlaceholderData = z.infer<typeof placeholderDataSchema>

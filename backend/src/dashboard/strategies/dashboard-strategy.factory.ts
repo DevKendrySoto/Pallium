@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import type { AuthenticatedUser } from '../../common/types/authenticated-user'
+import { AdminDashboardStrategy } from './admin-dashboard.strategy'
 import { AgendaDashboardStrategy } from './agenda-dashboard.strategy'
 import { CoordinatorDashboardStrategy } from './coordinator-dashboard.strategy'
 import type { IDashboardStrategy } from './dashboard-strategy.interface'
@@ -19,10 +20,12 @@ export class DashboardStrategyFactory {
     private readonly medico: MedicoDashboardStrategy,
     private readonly agenda: AgendaDashboardStrategy,
     private readonly coordinator: CoordinatorDashboardStrategy,
+    private readonly admin: AdminDashboardStrategy,
     private readonly placeholder: PlaceholderDashboardStrategy,
   ) {}
 
   resolve(user: AuthenticatedUser): IDashboardStrategy {
+    if (user.roles.includes('ADMIN')) return this.admin
     // El coordinador se evalúa antes que MEDICO (puede tener ambas especialidades).
     if (user.roles.includes('COORDINADOR_MEDICO')) return this.coordinator
     if (user.roles.includes('ENFERMERIA')) return this.nurse

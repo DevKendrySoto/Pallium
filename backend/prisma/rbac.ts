@@ -73,6 +73,8 @@ export const PERMISSIONS: Record<string, string> = {
   'role:manage': 'Gestionar roles y permisos',
   'category:manage': 'Gestionar categorías de paciente',
   'audit:read': 'Consultar la bitácora de auditoría',
+  'user:request': 'Solicitar el alta de un usuario',
+  'admin:operate': 'Operaciones administrativas (dashboard del admin, cierres, notificaciones)',
 }
 
 export const ALL = Object.keys(PERMISSIONS)
@@ -144,6 +146,7 @@ export const ROLES: RoleSeed[] = [
       'patient:change-status',
       'route:read',
       'route:assign-clinical-team',
+      'user:request',
     ],
   },
   {

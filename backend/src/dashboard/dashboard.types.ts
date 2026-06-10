@@ -12,6 +12,10 @@ export enum WidgetType {
   ROUTES_TODAY = 'routes_today',
   PATIENTS_TO_REVIEW = 'patients_to_review',
   ROUTES_UNASSIGNED = 'routes_unassigned',
+  PENDING_ADMIN_CLOSURES = 'pending_admin_closures',
+  PENDING_USER_REQUESTS = 'pending_user_requests',
+  ESCALATED_ALERTS = 'escalated_alerts',
+  FAILED_NOTIFICATIONS = 'failed_notifications',
   PLACEHOLDER = 'placeholder',
 }
 
@@ -128,6 +132,65 @@ export interface RouteUnassignedItem {
 }
 export interface RoutesUnassignedData {
   routes: RouteUnassignedItem[]
+  total: number
+}
+
+// ---- pending_admin_closures (admin) ----
+export interface PendingAdminClosureItem {
+  patient: { id: string; fullName: string }
+  deceasedAt: string | null
+  deceasedBy: string | null
+  daysPending: number
+  hasClinicalClosure: boolean
+}
+export interface PendingAdminClosuresData {
+  items: PendingAdminClosureItem[]
+  total: number
+}
+
+// ---- pending_user_requests (admin) ----
+export interface PendingUserRequestItem {
+  id: string
+  fullName: string
+  email: string
+  roleCode: string
+  reason: string | null
+  requestedBy: string
+  createdAt: string
+}
+export interface PendingUserRequestsData {
+  items: PendingUserRequestItem[]
+  total: number
+}
+
+// ---- escalated_alerts (admin) ----
+export interface EscalatedAlertItem {
+  id: string
+  type: string
+  severity: WidgetSeverity
+  title: string
+  patient: { id: string; name: string }
+  triggeredAt: string
+  hoursOpen: number
+  assignedTo: string | null
+}
+export interface EscalatedAlertsData {
+  items: EscalatedAlertItem[]
+  total: number
+}
+
+// ---- failed_notifications (admin) — sobre RouteDispatch fallidos ----
+export interface FailedNotificationItem {
+  id: string
+  channel: string
+  recipient: string
+  lastError: string | null
+  failedAt: string
+  routeId: string
+  routeName: string | null
+}
+export interface FailedNotificationsData {
+  items: FailedNotificationItem[]
   total: number
 }
 
