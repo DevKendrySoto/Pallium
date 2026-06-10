@@ -17,6 +17,22 @@ export class ScalesRepository {
     return this.prisma.scaleDefinition.findUnique({ where: { code } })
   }
 
+  /** Todas las definiciones (incl. inactivas) con su uso, para administración. */
+  listAllDefinitions() {
+    return this.prisma.scaleDefinition.findMany({
+      orderBy: { code: 'asc' },
+      include: { _count: { select: { assessments: true } } },
+    })
+  }
+
+  createDefinition(data: Prisma.ScaleDefinitionCreateInput) {
+    return this.prisma.scaleDefinition.create({ data })
+  }
+
+  updateDefinition(code: string, data: Prisma.ScaleDefinitionUpdateInput) {
+    return this.prisma.scaleDefinition.update({ where: { code }, data })
+  }
+
   createAssessment(data: Prisma.ScaleAssessmentCreateInput) {
     return this.prisma.scaleAssessment.create({
       data,
