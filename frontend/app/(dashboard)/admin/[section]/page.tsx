@@ -17,12 +17,6 @@ const SECTIONS: Record<string, { title: string; phase: number; description: stri
     description:
       'Salud del sistema: estado de la base de datos, colas y worker de cadencia, proveedor de WhatsApp, almacenamiento y últimas ejecuciones de tareas programadas.',
   },
-  catalogos: {
-    title: 'Catálogos',
-    phase: 3,
-    description:
-      'Gestión de catálogos: categorías de paciente, tipos de visita, zonas y otros valores maestros usados en toda la operación.',
-  },
   plantillas: {
     title: 'Plantillas clínicas',
     phase: 6,
