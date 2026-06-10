@@ -17,12 +17,6 @@ const SECTIONS: Record<string, { title: string; phase: number; description: stri
     description:
       'Salud del sistema: estado de la base de datos, colas y worker de cadencia, proveedor de WhatsApp, almacenamiento y últimas ejecuciones de tareas programadas.',
   },
-  plantillas: {
-    title: 'Plantillas clínicas',
-    phase: 6,
-    description:
-      'Editor de plantillas clínicas por rol y categoría de paciente: secciones, componentes y versiones del registro clínico dinámico.',
-  },
   'reglas-alertas': {
     title: 'Reglas de alertas',
     phase: 3,
